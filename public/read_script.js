@@ -92,6 +92,8 @@ function saveTranslationSettings() {
     localStorage.setItem('translationSettings', JSON.stringify(settings));
 }
 
+let settingsBeforeOpen = null;
+
 function loadTranslationSettings() {
     const settings = getTranslationSettings();
     const langEl = document.getElementById('translation-language');
@@ -108,12 +110,22 @@ function loadTranslationSettings() {
 }
 
 function openTranslationSettings() {
+    // Store settings before opening to detect changes
+    settingsBeforeOpen = JSON.stringify(getTranslationSettings());
     loadTranslationSettings();
     document.getElementById('translation-settings-modal')?.classList.remove('hidden');
 }
 
 function closeTranslationSettings() {
     document.getElementById('translation-settings-modal')?.classList.add('hidden');
+
+    // Check if settings changed and re-translate if needed
+    const currentSettings = JSON.stringify(getTranslationSettings());
+    if (settingsBeforeOpen !== currentSettings && aiTranslateEnabled) {
+        // Settings changed, re-translate current page
+        scheduleTranslation();
+    }
+    settingsBeforeOpen = null;
 }
 
 // Close modal when clicking outside
@@ -228,16 +240,42 @@ async function updateCacheCount() {
 
 // Language names for display
 const languageNames = {
+    // Popular
     en: 'English',
     ur: 'Urdu',
+    tr: 'Turkish',
+    // Indian Languages
+    ml: 'Malayalam',
+    hi: 'Hindi',
+    bn: 'Bengali',
+    ta: 'Tamil',
+    te: 'Telugu',
+    kn: 'Kannada',
+    gu: 'Gujarati',
+    mr: 'Marathi',
+    pa: 'Punjabi',
+    // Southeast Asian
+    id: 'Indonesian',
+    ms: 'Malay',
+    // East Asian
+    'zh-CN': 'Chinese (Simplified)',
+    'zh-TW': 'Chinese (Traditional)',
+    ja: 'Japanese',
+    ko: 'Korean',
+    // Central Asian
+    uz: 'Uzbek',
+    kk: 'Kazakh',
+    tg: 'Tajik',
+    ky: 'Kyrgyz',
+    tk: 'Turkmen',
+    // European
+    ru: 'Russian',
     fr: 'French',
     de: 'German',
     es: 'Spanish',
-    tr: 'Turkish',
-    id: 'Indonesian',
-    ms: 'Malay',
-    bn: 'Bengali',
-    hi: 'Hindi'
+    it: 'Italian',
+    pt: 'Portuguese',
+    nl: 'Dutch'
 };
 
 // Style prompts
