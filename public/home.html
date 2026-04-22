@@ -936,10 +936,40 @@
             return authorsMap.get(authorId) || `مؤلف غير معروف (${authorId})`;
         }
 
+        // Debug: Explore database schema
+        function exploreDbSchema() {
+            console.log('=== DATABASE SCHEMA ===');
+
+            // Get all tables
+            const tablesStmt = masterDb.prepare("SELECT name FROM sqlite_master WHERE type='table'");
+            const tables = [];
+            while (tablesStmt.step()) {
+                tables.push(tablesStmt.getAsObject().name);
+            }
+            tablesStmt.free();
+            console.log('Tables:', tables);
+
+            // Get columns for each table
+            tables.forEach(table => {
+                const colStmt = masterDb.prepare(`PRAGMA table_info(${table})`);
+                const columns = [];
+                while (colStmt.step()) {
+                    columns.push(colStmt.getAsObject().name);
+                }
+                colStmt.free();
+                console.log(`${table} columns:`, columns);
+            });
+
+            console.log('=== END SCHEMA ===');
+        }
+
         // Load books list from master database
         async function loadBooksList() {
             updateLoadingText('جاري تحميل قائمة الكتب...');
             updateProgress('');
+
+            // Debug: explore schema first
+            exploreDbSchema();
 
             const stmt = masterDb.prepare("SELECT * FROM book ORDER BY book_name");
             allBooks = [];
@@ -949,6 +979,12 @@
                 allBooks.push(row);
             }
             stmt.free();
+
+            // Debug: log first book to see all fields
+            if (allBooks.length > 0) {
+                console.log('Sample book fields:', Object.keys(allBooks[0]));
+                console.log('Sample book:', allBooks[0]);
+            }
 
             filteredBooks = [...allBooks];
             renderBooksList();
