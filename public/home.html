@@ -842,7 +842,7 @@
             const btn = document.getElementById('sort-button');
             if (sortMode === 'name') {
                 btn.textContent = '🔤';
-                btn.title = 'مرتب حسب الاسم | Sorted by Name (A-Z)';
+                btn.title = 'مرتب حسب الاسم | Sorted by Name';
             } else {
                 btn.textContent = '📊';
                 btn.title = 'مرتب حسب عدد الصفحات | Sorted by Pages (High to Low)';
@@ -1618,7 +1618,7 @@
                 if (sortMode === 'name') {
                     filteredBooks.sort((a, b) => (a.book_name || '').localeCompare(b.book_name || '', 'ar'));
                 } else {
-                    filteredBooks.sort((a, b) => (b.major_online || 0) - (a.major_online || 0));
+                    filteredBooks.sort((a, b) => (parseInt(b.major_online) || 0) - (parseInt(a.major_online) || 0));
                 }
 
                 // Render recent books section first (fast)
