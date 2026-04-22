@@ -313,7 +313,7 @@ async function translateWithGemini(arabicText) {
 
     const settings = getTranslationSettings();
     const apiKey = settings.apiKey || DEFAULT_API_KEY;
-    const model = settings.model || 'gemini-2.0-flash';
+    const model = settings.model || 'gemini-flash-lite-latest';
     const apiUrl = `${GEMINI_API_BASE}${model}:generateContent?key=${apiKey}`;
 
     try {
@@ -337,11 +337,25 @@ async function translateWithGemini(arabicText) {
         });
 
         if (response.status === 429) {
-            return { error: 'quota_exceeded', message: 'API quota exceeded. Please try again later or add your own API key in settings.' };
+            return { error: 'quota_exceeded', details: `Status: ${response.status}` };
+        }
+
+        if (response.status === 400 || response.status === 403) {
+            let errorDetails = `Status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                errorDetails = errorData?.error?.message || errorDetails;
+            } catch (e) {}
+            return { error: 'api_key_invalid', details: errorDetails };
         }
 
         if (!response.ok) {
-            return { error: 'api_error', message: 'Translation failed. Please try again.' };
+            let errorDetails = `Status: ${response.status} ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                errorDetails = errorData?.error?.message || errorDetails;
+            } catch (e) {}
+            return { error: 'api_error', details: errorDetails };
         }
 
         const data = await response.json();
@@ -352,7 +366,7 @@ async function translateWithGemini(arabicText) {
             return null; // Cancelled, not an error
         }
         console.error('Translation error:', error);
-        return { error: 'network_error', message: 'Network error. Please check your connection.' };
+        return { error: 'network_error', details: error.message || 'Unknown error' };
     }
 }
 
@@ -408,7 +422,7 @@ function scheduleTranslation() {
         }
 
         if (result.error) {
-            showTranslationError(result.message);
+            showTranslationError(result.error, result.details);
         } else if (result.success) {
             // Save to cache
             await setCachedTranslation(bookId, pageNum, language, result.text);
@@ -470,15 +484,59 @@ function hideTranslation() {
     }
 }
 
-function showTranslationError(message) {
+function showTranslationError(errorType, details = '') {
     let translationDiv = document.getElementById('translation-content');
     if (!translationDiv) {
         createTranslationContainer();
         translationDiv = document.getElementById('translation-content');
     }
-    translationDiv.innerHTML = `<div class="translation-error">⚠️ ${message}</div>`;
+
+    let errorMessage = '';
+    let suggestion = '';
+
+    switch (errorType) {
+        case 'quota_exceeded':
+            errorMessage = 'API quota exceeded | تجاوز حد الاستخدام';
+            suggestion = 'Try changing the model, add your own API key, or wait and try again later.<br>جرب تغيير النموذج، أو إضافة مفتاح API الخاص بك، أو الانتظار والمحاولة لاحقاً.';
+            break;
+        case 'api_key_invalid':
+            errorMessage = 'Invalid API key | مفتاح API غير صالح';
+            suggestion = 'Please check your API key in settings.<br>يرجى التحقق من مفتاح API في الإعدادات.';
+            break;
+        case 'network_error':
+            errorMessage = 'Network error | خطأ في الاتصال';
+            suggestion = 'Please check your internet connection and try again.<br>يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.';
+            break;
+        default:
+            errorMessage = 'Translation failed | فشلت الترجمة';
+            suggestion = 'Try changing the API key or model in settings.<br>جرب تغيير مفتاح API أو النموذج في الإعدادات.';
+    }
+
+    const detailsHtml = details ? `<div class="error-details"><code>${details}</code></div>` : '';
+
+    translationDiv.innerHTML = `
+        <div class="translation-error">
+            <div class="error-title">⚠️ ${errorMessage}</div>
+            <div class="error-suggestion">${suggestion}</div>
+            ${detailsHtml}
+            <div class="error-buttons">
+                <button class="error-retry-btn" onclick="retryTranslation()">
+                    🔄 Retry | إعادة المحاولة
+                </button>
+                <button class="error-settings-btn" onclick="openTranslationSettings()">
+                    ⚙️ Settings | الإعدادات
+                </button>
+            </div>
+        </div>
+    `;
     document.getElementById('translation-container').classList.remove('hidden');
     document.getElementById('original-header')?.classList.remove('hidden');
+}
+
+function retryTranslation() {
+    if (aiTranslateEnabled) {
+        scheduleTranslation();
+    }
 }
 
 function createTranslationContainer() {
@@ -1037,3 +1095,39 @@ function updateLoadingText(text) {
 
 // Initialize when page loads
 window.addEventListener('load', init);
+
+// AI Translation Welcome Dialog
+function showWelcomeDialog() {
+    // Check if user has dismissed the dialog before
+    const dontShowAgain = localStorage.getItem('aiWelcomeDismissed');
+    if (dontShowAgain === 'true') {
+        return;
+    }
+
+    // Show the dialog
+    const dialog = document.getElementById('ai-welcome-dialog');
+    if (dialog) {
+        dialog.classList.remove('hidden');
+    }
+}
+
+function closeWelcomeDialog() {
+    const dialog = document.getElementById('ai-welcome-dialog');
+    const checkbox = document.getElementById('dont-show-again');
+
+    // Save preference if checkbox is checked
+    if (checkbox && checkbox.checked) {
+        localStorage.setItem('aiWelcomeDismissed', 'true');
+    }
+
+    // Hide the dialog
+    if (dialog) {
+        dialog.classList.add('hidden');
+    }
+}
+
+// Show welcome dialog after page loads
+window.addEventListener('load', () => {
+    // Delay slightly to let the page render first
+    setTimeout(showWelcomeDialog, 500);
+});

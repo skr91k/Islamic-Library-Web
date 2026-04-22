@@ -177,31 +177,21 @@
                     <div class="setting-group">
                         <label class="setting-label">🤖 AI Model | نموذج الذكاء الاصطناعي</label>
                         <select id="translation-model" class="setting-select" onchange="saveTranslationSettings()">
-
-
-                            <optgroup label="Latest Generation (Gemini 3.1  or 3.1+)">
-                                <option value="gemini-flash-lite-latest">Gemini Latest Flash Lite (Fastest & Cheapest)
-                                </option>
-                                <option value="gemini-flash-latest" selected>Gemini Latest Flash (Fast & Balanced)
-                                </option>
-                                <option value="gemini-pro-latest">Gemini Latest Pro (Highest Quality & Nuance)</option>
+                            <optgroup label="Latest (Auto-Updated)">
+                                <option value="gemini-flash-lite-latest" selected>gemini-flash-lite-latest (Default)</option>
+                                <option value="gemini-flash-latest">gemini-flash-latest</option>
+                                <option value="gemini-pro-latest">gemini-pro-latest</option>
                             </optgroup>
-
-
-
-                            <optgroup label="Latest Generation (Gemini 3.1)">
-                                <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Fastest & Cheapest)
-                                </option>
-                                <option value="gemini-3.1-flash" selected>Gemini 3.1 Flash (Fast & Balanced)</option>
-                                <option value="gemini-3.1-pro">Gemini 3.1 Pro (Highest Quality & Nuance)</option>
+                            <optgroup label="Gemini 3.x (Preview)">
+                                <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview</option>
+                                <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
+                                <option value="gemini-3.1-flash-lite-preview">gemini-3.1-flash-lite-preview</option>
                             </optgroup>
-
-                            <optgroup label="Previous Stable (Gemini 2.5)">
-                                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-                                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                            <optgroup label="Gemini 2.5">
+                                <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                                <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                                <option value="gemini-2.5-pro-experimental">gemini-2.5-pro-experimental</option>
                             </optgroup>
-
                         </select>
                     </div>
 
@@ -232,6 +222,41 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- AI Translation Welcome Dialog -->
+    <div id="ai-welcome-dialog" class="welcome-dialog hidden">
+        <div class="welcome-dialog-content">
+            <div class="welcome-icon">🤖</div>
+            <h2>ترجمة بالذكاء الاصطناعي</h2>
+            <h3>AI Translation Feature</h3>
+            <div class="welcome-message">
+                <p>يمكنك ترجمة النص إلى لغتك باستخدام الذكاء الاصطناعي</p>
+                <p>You can translate text to your language using AI</p>
+            </div>
+            <div class="welcome-instruction">
+                <div class="instruction-text">
+                    <p>اضغط على زر 🤖 لتفعيل الترجمة</p>
+                    <p>Click the 🤖 button to enable translation</p>
+                </div>
+            </div>
+            <div class="welcome-disclaimer">
+                <p>⚠️ <strong>تنبيه | Disclaimer:</strong></p>
+                <p>الترجمة الآلية قد لا تكون دقيقة. لسنا مسؤولين عن أي أخطاء في الترجمة.</p>
+                <p>AI translation may not be accurate. We are not responsible for any translation errors.</p>
+                <p>حتى النص العربي الأصلي قد يحتوي على أخطاء مطبعية.</p>
+                <p>Even the original Arabic text may contain typos or errors.</p>
+            </div>
+            <div class="welcome-checkbox">
+                <label>
+                    <input type="checkbox" id="dont-show-again" checked>
+                    <span>لا تظهر مرة أخرى | Don't show again</span>
+                </label>
+            </div>
+            <button class="welcome-close-btn" onclick="closeWelcomeDialog()">
+                فهمت | Got it
+            </button>
         </div>
     </div>
 
