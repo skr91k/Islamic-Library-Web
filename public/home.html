@@ -196,6 +196,10 @@
             font-size: 0.8rem;
         }
 
+        .cached-indicator.hidden {
+            display: none;
+        }
+
         .recent-books-section {
             margin-bottom: 30px;
         }
@@ -464,18 +468,22 @@
         async function init() {
             try {
                 // Initialize SQL.js
+                updateLoadingText('جاري تهيئة المكتبة... | Initializing...');
                 const SQL = await initSqlJs({
                     locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
                 });
                 sqlWorker = SQL;
 
                 // Load master database
+                updateLoadingText('جاري تحميل قاعدة البيانات... | Loading database...');
                 await loadMasterDatabase();
 
                 // Load authors
+                updateLoadingText('جاري تحميل المؤلفين... | Loading authors...');
                 await loadAuthors();
 
                 // Load books list
+                updateLoadingText('جاري تحميل الكتب... | Loading books...');
                 await loadBooksList();
 
                 // Check for author filter in URL
@@ -887,61 +895,63 @@
 
             try {
                 const grid = document.getElementById('books-grid');
-                grid.innerHTML = '';
 
-                // Render recent books section
+                // Render recent books section first (fast)
                 await renderRecentBooks();
 
-                // Show loading indicator if we're checking cache status for many books
-                if (filteredBooks.length > 50) {
-                    updateLoadingText('جاري تحديث حالة الكتب...');
-                    showLoading();
-
-                    // Use setTimeout to allow UI to update
-                    await new Promise(resolve => setTimeout(resolve, 10));
-                }
-
-                // Build all cards first
-                const cards = [];
-                for (const book of filteredBooks) {
-                    const bookFilename = `${book.book_id}-${book.major_online}-${book.minor_online}`;
-                    const isCached = await cacheManager.exists('books', bookFilename);
-                    const authorName = getAuthorName(book.main_author);
-
-                    cards.push({
-                        book,
-                        html: `
-                            <div class="book-title">${book.book_name || 'كتاب بدون عنوان'}</div>
-                            <div class="book-meta">
-                                <span class="author-name">${authorName}</span>
-                                ${isCached ? '<span class="cached-indicator">محفوظ</span>' : ''}
-                            </div>
-                        `
-                    });
-                }
-
-                // Clear and render all at once
+                // Render books immediately WITHOUT cache check (fast)
                 grid.innerHTML = '';
-                for (const card of cards) {
+                for (const book of filteredBooks) {
+                    const authorName = getAuthorName(book.main_author);
                     const bookCard = document.createElement('div');
                     bookCard.className = 'book-card';
-                    bookCard.onclick = () => openBook(card.book);
-                    bookCard.innerHTML = card.html;
+                    bookCard.id = `book-${book.book_id}`;
+                    bookCard.onclick = () => openBook(book);
+                    bookCard.innerHTML = `
+                        <div class="book-title">${book.book_name || 'كتاب بدون عنوان'}</div>
+                        <div class="book-meta">
+                            <span class="author-name">${authorName}</span>
+                            <span class="cached-indicator hidden" id="cached-${book.book_id}">محفوظ</span>
+                        </div>
+                    `;
                     grid.appendChild(bookCard);
                 }
 
-                // Hide loading if it was shown
-                if (filteredBooks.length > 50) {
-                    hideLoading();
-                    showBooksList();
-                }
+                // Update cache indicators asynchronously (non-blocking)
+                updateCacheIndicators();
+
             } finally {
                 isRenderingBooks = false;
-                // If a render was requested while we were rendering, do it now
                 if (pendingRender) {
                     renderBooksList();
                 }
             }
+        }
+
+        // Update cache indicators in background (non-blocking)
+        async function updateCacheIndicators() {
+            const BATCH_SIZE = 20;
+            for (let i = 0; i < filteredBooks.length; i += BATCH_SIZE) {
+                const batch = filteredBooks.slice(i, i + BATCH_SIZE);
+
+                // Check batch in parallel
+                await Promise.all(batch.map(async (book) => {
+                    const bookFilename = `${book.book_id}-${book.major_online}-${book.minor_online}`;
+                    const isCached = await cacheManager.exists('books', bookFilename);
+                    if (isCached) {
+                        const indicator = document.getElementById(`cached-${book.book_id}`);
+                        if (indicator) indicator.classList.remove('hidden');
+                    }
+                }));
+
+                // Yield to UI thread between batches
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+        }
+
+        // Check if mobile device
+        function isMobile() {
+            return window.innerWidth <= 768;
         }
 
         // Render recent books section
@@ -955,7 +965,7 @@
                 const recentBooksSection = document.getElementById('recent-books-section');
                 const recentBooksGrid = document.getElementById('recent-books-grid');
                 const searchInput = document.getElementById('search-input');
-                const recentBooks = getRecentBooks();
+                let recentBooks = getRecentBooks();
 
                 // Hide section if search is active, author filter is active, or no recent books
                 const hasSearchQuery = searchInput && searchInput.value.trim() !== '';
@@ -965,39 +975,45 @@
                     return;
                 }
 
-                recentBooksSection.classList.remove('hidden');
+                // Limit to 3 on mobile
+                if (isMobile()) {
+                    recentBooks = recentBooks.slice(0, 3);
+                }
 
-                // Build all cards first, then set innerHTML once
-                const cards = [];
+                recentBooksSection.classList.remove('hidden');
+                recentBooksGrid.innerHTML = '';
+
+                // Render immediately without cache check
+                const booksToCheck = [];
                 for (const recentBook of recentBooks) {
                     const book = allBooks.find(b => b.book_id === recentBook.book_id);
                     if (!book) continue;
 
-                    const bookFilename = `${book.book_id}-${book.major_online}-${book.minor_online}`;
-                    const isCached = await cacheManager.exists('books', bookFilename);
                     const authorName = getAuthorName(book.main_author);
-
-                    cards.push({
-                        book,
-                        html: `
-                            <div class="book-title">${book.book_name || 'كتاب بدون عنوان'}</div>
-                            <div class="book-meta">
-                                <span class="author-name">${authorName}</span>
-                                ${isCached ? '<span class="cached-indicator">محفوظ</span>' : ''}
-                            </div>
-                        `
-                    });
-                }
-
-                // Clear and render all at once
-                recentBooksGrid.innerHTML = '';
-                for (const card of cards) {
                     const bookCard = document.createElement('div');
                     bookCard.className = 'recent-book-card';
-                    bookCard.onclick = () => openBook(card.book);
-                    bookCard.innerHTML = card.html;
+                    bookCard.id = `recent-${book.book_id}`;
+                    bookCard.onclick = () => openBook(book);
+                    bookCard.innerHTML = `
+                        <div class="book-title">${book.book_name || 'كتاب بدون عنوان'}</div>
+                        <div class="book-meta">
+                            <span class="author-name">${authorName}</span>
+                            <span class="cached-indicator hidden" id="recent-cached-${book.book_id}">محفوظ</span>
+                        </div>
+                    `;
                     recentBooksGrid.appendChild(bookCard);
+                    booksToCheck.push(book);
                 }
+
+                // Update cache indicators asynchronously
+                Promise.all(booksToCheck.map(async (book) => {
+                    const bookFilename = `${book.book_id}-${book.major_online}-${book.minor_online}`;
+                    const isCached = await cacheManager.exists('books', bookFilename);
+                    if (isCached) {
+                        const indicator = document.getElementById(`recent-cached-${book.book_id}`);
+                        if (indicator) indicator.classList.remove('hidden');
+                    }
+                }));
             } finally {
                 isRenderingRecent = false;
             }
