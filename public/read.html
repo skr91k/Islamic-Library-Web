@@ -7,9 +7,11 @@
     <title>قارئ الكتب - Islamic Books Reader</title>
 
     <!-- SEO Meta Tags -->
-    <meta name="description" content="قارئ الكتب الإسلامية - اقرأ الكتب الإسلامية مع ترجمة آلية. Islamic book reader with AI translation support.">
+    <meta name="description"
+        content="قارئ الكتب الإسلامية - اقرأ الكتب الإسلامية مع ترجمة آلية. Islamic book reader with AI translation support.">
     <meta name="robots" content="index, follow">
-    <meta name="keywords" content="قارئ كتب إسلامية, Islamic book reader, Arabic book reader, قراءة كتب, ترجمة كتب إسلامية, Islamic books translation">
+    <meta name="keywords"
+        content="قارئ كتب إسلامية, Islamic book reader, Arabic book reader, قراءة كتب, ترجمة كتب إسلامية, Islamic books translation">
 
     <!-- Open Graph -->
     <meta property="og:type" content="article">
@@ -114,6 +116,8 @@
                     <button class="modal-close" onclick="closeTranslationSettings()">✕</button>
                 </div>
                 <div class="modal-body">
+
+
                     <!-- Language Selection -->
                     <div class="setting-group">
                         <label class="setting-label">🌍 Target Language | اللغة المستهدفة</label>
@@ -122,6 +126,7 @@
                                 <option value="en">English</option>
                                 <option value="ur">اردو (Urdu)</option>
                                 <option value="tr">Türkçe (Turkish)</option>
+                                <option value="fa">فارسی (Farsi/Persian)</option>
                             </optgroup>
                             <optgroup label="── Indian Languages ──">
                                 <option value="ml">മലയാളം (Malayalam)</option>
@@ -134,15 +139,27 @@
                                 <option value="mr">मराठी (Marathi)</option>
                                 <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
                             </optgroup>
+                            <optgroup label="── Middle East ──">
+                                <option value="fa">فارسی (Farsi/Persian)</option>
+                                <option value="ku">کوردی (Kurdish)</option>
+                                <option value="ps">پښتو (Pashto)</option>
+                                <option value="sd">سنڌي (Sindhi)</option>
+                            </optgroup>
                             <optgroup label="── Southeast Asian ──">
                                 <option value="id">Bahasa Indonesia</option>
                                 <option value="ms">Bahasa Melayu</option>
+                                <option value="tl">Filipino (Tagalog)</option>
+                                <option value="jv">Basa Jawa (Javanese)</option>
+                                <option value="su">Basa Sunda (Sundanese)</option>
+                                <option value="my">မြန်မာ (Burmese)</option>
+                                <option value="th">ภาษาไทย (Thai)</option>
                             </optgroup>
                             <optgroup label="── East Asian ──">
                                 <option value="zh-CN">中文简体 (Chinese Simplified)</option>
                                 <option value="zh-TW">中文繁體 (Chinese Traditional)</option>
                                 <option value="ja">日本語 (Japanese)</option>
                                 <option value="ko">한국어 (Korean)</option>
+                                <option value="ug">ئۇيغۇرچە (Uyghur)</option>
                             </optgroup>
                             <optgroup label="── Central Asian ──">
                                 <option value="uz">Oʻzbek (Uzbek)</option>
@@ -150,6 +167,19 @@
                                 <option value="tg">Тоҷикӣ (Tajik)</option>
                                 <option value="ky">Кыргызча (Kyrgyz)</option>
                                 <option value="tk">Türkmen (Turkmen)</option>
+                                <option value="az">Azərbaycan (Azerbaijani)</option>
+                                <option value="ba">Башҡортса (Bashkir)</option>
+                                <option value="tt">Татарча (Tatar)</option>
+                                <option value="ce">Нохчийн (Chechen)</option>
+                            </optgroup>
+                            <optgroup label="── African ──">
+                                <option value="sw">Kiswahili (Swahili)</option>
+                                <option value="ha">Hausa</option>
+                                <option value="yo">Yorùbá (Yoruba)</option>
+                                <option value="am">አማርኛ (Amharic)</option>
+                                <option value="wo">Wolof</option>
+                                <option value="ff">Fulfulde (Fulani)</option>
+                                <option value="om">Oromoo (Oromo)</option>
                             </optgroup>
                             <optgroup label="── European ──">
                                 <option value="ru">Русский (Russian)</option>
@@ -159,9 +189,17 @@
                                 <option value="it">Italiano (Italian)</option>
                                 <option value="pt">Português (Portuguese)</option>
                                 <option value="nl">Nederlands (Dutch)</option>
+                                <option value="bs">Bosanski (Bosnian)</option>
+                                <option value="sq">Shqip (Albanian)</option>
+                            </optgroup>
+                            <optgroup label="── South Asian ──">
+                                <option value="si">සිංහල (Sinhala)</option>
+                                <option value="ne">नेपाली (Nepali)</option>
+                                <option value="dv">ދިވެހި (Dhivehi/Maldivian)</option>
                             </optgroup>
                         </select>
                     </div>
+
 
                     <!-- Translation Style -->
                     <div class="setting-group">
@@ -178,7 +216,8 @@
                         <label class="setting-label">🤖 AI Model | نموذج الذكاء الاصطناعي</label>
                         <select id="translation-model" class="setting-select" onchange="saveTranslationSettings()">
                             <optgroup label="Latest (Auto-Updated)">
-                                <option value="gemini-flash-lite-latest" selected>gemini-flash-lite-latest (Default)</option>
+                                <option value="gemini-flash-lite-latest" selected>gemini-flash-lite-latest (Default)
+                                </option>
                                 <option value="gemini-flash-latest">gemini-flash-latest</option>
                                 <option value="gemini-pro-latest">gemini-pro-latest</option>
                             </optgroup>
