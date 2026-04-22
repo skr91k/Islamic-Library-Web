@@ -57,7 +57,7 @@
                     <div class="header-controls">
                         <button class="ai-translate-btn" onclick="toggleAiTranslate()" id="ai-translate-btn"
                             title="AI Translation">
-                            🤖
+                            <img src="ai.png" alt="AI" style="width: 20px; height: 20px;">
                         </button>
                         <button class="theme-toggle2" onclick="toggleTheme()" id="theme-toggle">
                             🌙
@@ -212,7 +212,7 @@
                     </div>
 
                     <div class="setting-group">
-                        <label class="setting-label">🤖 AI Model | نموذج الذكاء الاصطناعي</label>
+                        <label class="setting-label"><img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> AI Model | نموذج الذكاء الاصطناعي</label>
                         <select id="translation-model" class="setting-select" onchange="saveTranslationSettings()">
                             <optgroup label="Latest (Auto-Updated)">
                                 <option value="gemini-flash-lite-latest" selected>gemini-flash-lite-latest (Default)
@@ -266,7 +266,7 @@
     <!-- AI Translation Welcome Dialog -->
     <div id="ai-welcome-dialog" class="welcome-dialog hidden">
         <div class="welcome-dialog-content">
-            <div class="welcome-icon">🤖</div>
+            <div class="welcome-icon"><img src="ai.png" alt="AI" style="width: 48px; height: 48px;"></div>
             <h2>ترجمة بالذكاء الاصطناعي</h2>
             <h3>AI Translation Feature</h3>
             <div class="welcome-message">
@@ -275,8 +275,8 @@
             </div>
             <div class="welcome-instruction">
                 <div class="instruction-text">
-                    <p>اضغط على زر 🤖 لتفعيل الترجمة</p>
-                    <p>Click the 🤖 button to enable translation</p>
+                    <p>اضغط على زر <img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> لتفعيل الترجمة</p>
+                    <p>Click the <img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> button to enable translation</p>
                 </div>
             </div>
             <div class="welcome-disclaimer">

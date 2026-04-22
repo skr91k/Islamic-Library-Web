@@ -869,7 +869,7 @@
                 <div class="search-row">
                     <div class="search-input-wrapper">
                         <input type="text" id="search-input" class="search-input" placeholder="ابحث في الكتب...">
-                        <button class="ai-search-btn" onclick="aiSearch()" title="AI Search | بحث ذكي">🤖</button>
+                        <button class="ai-search-btn" onclick="aiSearch()" title="AI Search | بحث ذكي"><img src="ai.png" alt="AI" style="width: 20px; height: 20px;"></button>
                     </div>
                     <button class="category-btn" onclick="openCategorySearch()" title="Browse Categories">
                         📂 التصنيفات
@@ -884,7 +884,7 @@
             <div id="ai-search-modal" class="ai-modal hidden">
                 <div class="ai-modal-content">
                     <div class="ai-modal-header">
-                        <h3>🤖 AI Search | بحث ذكي</h3>
+                        <h3><img src="ai.png" alt="AI" style="width: 20px; height: 20px; vertical-align: middle;"> AI Search | بحث ذكي</h3>
                         <button class="modal-close" onclick="closeAiSearch()">✕</button>
                     </div>
                     <div class="ai-modal-body" id="ai-modal-body">
@@ -897,12 +897,12 @@
             <div id="ai-settings-modal" class="author-modal hidden">
                 <div class="author-modal-content" style="max-width: 450px;">
                     <div class="author-modal-header">
-                        <h3>🤖 AI Settings | إعدادات الذكاء الاصطناعي</h3>
+                        <h3><img src="ai.png" alt="AI" style="width: 20px; height: 20px; vertical-align: middle;"> AI Settings | إعدادات الذكاء الاصطناعي</h3>
                         <button class="modal-close" onclick="closeAiSettings()">✕</button>
                     </div>
                     <div style="padding: 20px;">
                         <div class="setting-group" style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">🤖 AI Model</label>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> AI Model</label>
                             <select id="ai-model" class="author-search-input" onchange="saveAiSettings()">
                                 <optgroup label="Latest (Auto-Updated)">
                                     <option value="gemini-flash-lite-latest" selected>gemini-flash-lite-latest (Default)</option>

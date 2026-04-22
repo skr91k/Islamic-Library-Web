@@ -462,10 +462,10 @@ function showTranslationLoading() {
     const langName = languageNames[settings.language] || 'English';
     const headerEl = document.getElementById('translation-header-text');
     if (headerEl) {
-        headerEl.innerHTML = `🤖 ${langName} Translation <span class="settings-icon">⚙️</span>`;
+        headerEl.innerHTML = `<img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> ${langName} Translation <span class="settings-icon">⚙️</span>`;
     }
 
-    translationDiv.innerHTML = '<div class="translation-loading">🤖 Translating...</div>';
+    translationDiv.innerHTML = '<div class="translation-loading"><img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> Translating...</div>';
     document.getElementById('translation-container').classList.remove('hidden');
 }
 
@@ -482,7 +482,7 @@ function showTranslation(text, fromCache = false) {
     const cacheIndicator = fromCache ? ' 💾' : '';
     const headerEl = document.getElementById('translation-header-text');
     if (headerEl) {
-        headerEl.innerHTML = `🤖 ${langName} Translation${cacheIndicator} <span class="settings-icon">⚙️</span>`;
+        headerEl.innerHTML = `<img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> ${langName} Translation${cacheIndicator} <span class="settings-icon">⚙️</span>`;
     }
 
     translationDiv.innerHTML = text.replace(/\n/g, '<br>');
@@ -713,7 +713,7 @@ function createTranslationContainer() {
     container.className = 'translation-container hidden';
     container.innerHTML = `
         <div class="translation-header clickable" onclick="openTranslationSettings()" id="translation-header-text">
-            🤖 ${langName} Translation <span class="settings-icon">⚙️</span>
+            <img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> ${langName} Translation <span class="settings-icon">⚙️</span>
         </div>
         <div id="translation-content" class="translation-content"></div>
     `;
