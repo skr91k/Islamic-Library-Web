@@ -69,6 +69,9 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models
 let translationTimeout = null;
 let currentTranslationController = null;
 let translationCache = null;
+let prefetchTimeout = null;
+let prefetchController = null;
+let lastTranslatedPage = null;
 
 // Translation Settings
 const defaultSettings = {
@@ -376,6 +379,16 @@ function scheduleTranslation() {
         clearTimeout(translationTimeout);
     }
 
+    // Cancel any pending prefetch
+    if (prefetchTimeout) {
+        clearTimeout(prefetchTimeout);
+        prefetchTimeout = null;
+    }
+    if (prefetchController) {
+        prefetchController.abort();
+        prefetchController = null;
+    }
+
     // Don't translate if disabled
     if (!aiTranslateEnabled) {
         hideTranslation();
@@ -405,6 +418,9 @@ function scheduleTranslation() {
         if (cachedTranslation) {
             if (aiTranslateEnabled) {
                 showTranslation(cachedTranslation, true); // true = from cache
+                // Also schedule prefetch for next page
+                lastTranslatedPage = pageNum;
+                schedulePrefetch(pageNum);
             }
             return;
         }
@@ -427,6 +443,10 @@ function scheduleTranslation() {
             // Save to cache
             await setCachedTranslation(bookId, pageNum, language, result.text);
             showTranslation(result.text, false);
+
+            // Schedule prefetch for next page after 10 seconds
+            lastTranslatedPage = pageNum;
+            schedulePrefetch(pageNum);
         }
     }, 1000);
 }
@@ -536,6 +556,147 @@ function showTranslationError(errorType, details = '') {
 function retryTranslation() {
     if (aiTranslateEnabled) {
         scheduleTranslation();
+    }
+}
+
+// Prefetch next page translation after successful translation
+function schedulePrefetch(currentPageAtTranslation) {
+    // Clear any pending prefetch
+    if (prefetchTimeout) {
+        clearTimeout(prefetchTimeout);
+    }
+    if (prefetchController) {
+        prefetchController.abort();
+        prefetchController = null;
+    }
+
+    // Wait 10 seconds before prefetching
+    prefetchTimeout = setTimeout(async () => {
+        // Check if user is still on the same page
+        if (currentPage !== currentPageAtTranslation) {
+            console.log('Prefetch cancelled: page changed');
+            return;
+        }
+
+        // Check if there's a next page
+        const nextPageNum = currentPageAtTranslation + 1;
+        if (nextPageNum > totalPages) {
+            console.log('Prefetch cancelled: no next page');
+            return;
+        }
+
+        // Check if AI translate is still enabled
+        if (!aiTranslateEnabled) {
+            console.log('Prefetch cancelled: AI translate disabled');
+            return;
+        }
+
+        const settings = getTranslationSettings();
+        const bookId = bookInfo?.book_id || 0;
+        const language = settings.language;
+
+        // Check if next page translation is already cached
+        const cachedTranslation = await getCachedTranslation(bookId, nextPageNum, language);
+        if (cachedTranslation) {
+            console.log('Prefetch skipped: next page already cached');
+            return;
+        }
+
+        // Get next page content from database
+        const nextPageContent = getPageContent(nextPageNum);
+        if (!nextPageContent) {
+            console.log('Prefetch cancelled: could not get next page content');
+            return;
+        }
+
+        console.log('Prefetching translation for page', nextPageNum);
+
+        // Create abort controller for prefetch
+        prefetchController = new AbortController();
+
+        // Translate next page (silently in background)
+        const result = await translateWithGeminiPrefetch(nextPageContent, prefetchController.signal);
+
+        // Check again if still on same page and AI enabled
+        if (currentPage !== currentPageAtTranslation || !aiTranslateEnabled) {
+            console.log('Prefetch result discarded: page changed or AI disabled');
+            return;
+        }
+
+        if (result && result.success) {
+            // Save to cache
+            await setCachedTranslation(bookId, nextPageNum, language, result.text);
+            console.log('Prefetch successful: page', nextPageNum, 'translation cached');
+        } else if (result && result.error) {
+            console.log('Prefetch failed:', result.error);
+        }
+    }, 10000); // 10 seconds delay
+}
+
+// Get page content by page number
+function getPageContent(pageNum) {
+    if (!currentBookDb) return null;
+
+    try {
+        const stmt = currentBookDb.prepare("SELECT * FROM page ORDER BY id LIMIT 1 OFFSET ?");
+        stmt.bind([pageNum - 1]);
+
+        if (stmt.step()) {
+            const page = stmt.getAsObject();
+            const content = page.content || '';
+            stmt.free();
+            // Strip HTML tags to get plain text for translation
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            return tempDiv.innerText || tempDiv.textContent || '';
+        }
+        stmt.free();
+        return null;
+    } catch (e) {
+        console.error('Error getting page content:', e);
+        return null;
+    }
+}
+
+// Separate translate function for prefetch (doesn't cancel current translation)
+async function translateWithGeminiPrefetch(arabicText, signal) {
+    const settings = getTranslationSettings();
+    const apiKey = settings.apiKey || DEFAULT_API_KEY;
+    const model = settings.model || 'gemini-flash-lite-latest';
+    const apiUrl = `${GEMINI_API_BASE}${model}:generateContent?key=${apiKey}`;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: buildTranslationPrompt(arabicText, settings)
+                    }]
+                }],
+                generationConfig: {
+                    temperature: 0.3,
+                    maxOutputTokens: 4096
+                }
+            }),
+            signal: signal
+        });
+
+        if (!response.ok) {
+            return { error: 'api_error', details: `Status: ${response.status}` };
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return { success: true, text };
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return null; // Cancelled
+        }
+        return { error: 'network_error', details: error.message };
     }
 }
 
