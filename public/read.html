@@ -1,10 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>قارئ الكتب - Islamic Books Reader</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="قارئ الكتب الإسلامية - اقرأ الكتب الإسلامية مع ترجمة آلية. Islamic book reader with AI translation support.">
+    <meta name="robots" content="index, follow">
+    <meta name="keywords" content="قارئ كتب إسلامية, Islamic book reader, Arabic book reader, قراءة كتب, ترجمة كتب إسلامية, Islamic books translation">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="قارئ الكتب - Islamic Books Reader">
+    <meta property="og:description" content="قارئ الكتب الإسلامية مع ترجمة آلية">
+    <meta property="og:locale" content="ar_SA">
+
+    <!-- Theme -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+
     <link rel="stylesheet" href="read_styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -221,6 +237,47 @@
 
     <script src="config.js"></script>
     <script src="read_script.js"></script>
+
+    <!-- Firebase SDK -->
+    <script src="firebase-config.js"></script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js';
+
+        // Initialize Firebase
+        if (typeof FIREBASE_CONFIG !== 'undefined') {
+            const app = initializeApp(FIREBASE_CONFIG);
+            const analytics = getAnalytics(app);
+
+            // Get book info from localStorage
+            const bookInfo = JSON.parse(localStorage.getItem('currentBook') || '{}');
+
+            // Log page view with book details
+            logEvent(analytics, 'page_view', {
+                page_title: 'Islamic Books Reader',
+                page_location: window.location.href,
+                book_name: bookInfo.book_name || 'Unknown',
+                book_id: bookInfo.book_id || 'Unknown'
+            });
+
+            // Log book read event
+            if (bookInfo.book_id) {
+                logEvent(analytics, 'book_read', {
+                    book_id: bookInfo.book_id,
+                    book_name: bookInfo.book_name,
+                    author_name: bookInfo.author_name
+                });
+            }
+
+            // Make analytics available globally
+            window.firebaseAnalytics = analytics;
+            window.logAnalyticsEvent = (eventName, params) => {
+                logEvent(analytics, eventName, params);
+            };
+
+            console.log('Firebase Analytics initialized');
+        }
+    </script>
 </body>
 
 </html>
