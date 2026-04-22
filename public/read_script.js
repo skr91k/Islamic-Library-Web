@@ -344,6 +344,8 @@ async function loadBookPages() {
     currentPage = 1;
     document.getElementById('book-title-header').textContent = bookInfo.book_name;
     document.getElementById('book-title').textContent = bookInfo.book_name;
+    document.getElementById('book-author-header').textContent = bookInfo.author_name || '';
+    document.getElementById('book-author').textContent = bookInfo.author_name || '';
     document.getElementById('goto-input').max = totalPages;
     
     updatePageDisplay();

@@ -139,6 +139,13 @@ body {
     min-width: 200px;
 }
 
+.reader-author {
+    font-size: 0.95rem;
+    color: var(--accent);
+    font-style: italic;
+    margin-top: 2px;
+}
+
 .header-controls {
     display: flex;
     gap: 10px;
@@ -299,6 +306,13 @@ body {
     color: var(--text-light);
     text-align: center;
     backdrop-filter: blur(10px);
+}
+
+.book-author {
+    font-size: 1rem;
+    color: var(--accent);
+    font-style: italic;
+    margin-top: 5px;
 }
 
 /* Enhanced Seekable Progress Bar */

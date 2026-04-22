@@ -196,6 +196,61 @@
             font-size: 0.8rem;
         }
 
+        .recent-books-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            color: var(--text-light);
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '📖';
+        }
+
+        .recent-books-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .recent-book-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 6px 20px var(--shadow);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid var(--accent);
+            position: relative;
+        }
+
+        .recent-book-card::after {
+            content: 'آخر قراءة | Recent';
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background: var(--accent);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+        }
+
+        .recent-book-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px var(--shadow-hover);
+        }
+
+        .all-books-section {
+            margin-top: 20px;
+        }
+
         .error {
             background: var(--error);
             color: white;
@@ -292,7 +347,17 @@
             <div class="search-container">
                 <input type="text" id="search-input" class="search-input" placeholder="ابحث في الكتب...">
             </div>
-            <div id="books-grid" class="books-grid"></div>
+
+            <!-- Recent Books Section -->
+            <div id="recent-books-section" class="recent-books-section hidden">
+                <div class="section-title">آخر الكتب المفتوحة | Recently Opened</div>
+                <div id="recent-books-grid" class="recent-books-grid"></div>
+            </div>
+
+            <!-- All Books Section -->
+            <div class="all-books-section">
+                <div id="books-grid" class="books-grid"></div>
+            </div>
         </div>
 
         <!-- Error Display -->
@@ -337,7 +402,7 @@
         // Configuration
         const CONFIG = {
             masterUrl: './master.sqlite.zip',
-            bookUrlPrefix: 'https://q8.web.app/books/',
+            bookUrlPrefix: 'https://islamicbooks-b13c0.web.app/sqlite/',
             dbName: 'booksCache',
             version: 1
         };
@@ -664,11 +729,11 @@
 
         // Clear storage with simple confirm dialog
         async function clearStorageWithConfirm() {
-            const confirmed = confirm(`هل تريد مسح جميع البيانات المحفوظة؟\nسيتم حذف ${formatBytes(currentStorageSize)} من البيانات.\nلا يمكن التراجع عن هذا الإجراء!`);
+            const confirmed = confirm(`هل تريد مسح جميع البيانات المحفوظة؟\nDo you want to clear all saved data?\n\nسيتم حذف ${formatBytes(currentStorageSize)} من البيانات.\n${formatBytes(currentStorageSize)} of data will be deleted.\n\nلا يمكن التراجع عن هذا الإجراء!\nThis action cannot be undone!`);
 
             if (confirmed) {
                 try {
-                    updateLoadingText('جاري مسح البيانات المحفوظة...');
+                    updateLoadingText('جاري مسح البيانات المحفوظة... Clearing saved data...');
                     hideBooksList();
                     showLoading();
 
@@ -691,66 +756,153 @@
                     showBooksList();
 
                     // Show success message briefly
-                    showError('تم مسح جميع البيانات المحفوظة بنجاح');
+                    showError('تم مسح جميع البيانات المحفوظة بنجاح | All saved data cleared successfully');
                     setTimeout(() => {
                         document.getElementById('error-message').classList.add('hidden');
                     }, 3000);
 
                 } catch (error) {
                     hideLoading();
-                    showError('خطأ في مسح البيانات: ' + error.message);
+                    showError('خطأ في مسح البيانات | Error clearing data: ' + error.message);
                 }
             }
         }
 
         // Render books list
+        let isRenderingBooks = false;
+        let pendingRender = false;
         async function renderBooksList() {
-            const grid = document.getElementById('books-grid');
-            grid.innerHTML = '';
-
-            // Show loading indicator if we're checking cache status for many books
-            if (filteredBooks.length > 50) {
-                updateLoadingText('جاري تحديث حالة الكتب...');
-                showLoading();
-
-                // Use setTimeout to allow UI to update
-                await new Promise(resolve => setTimeout(resolve, 10));
+            // If already rendering, mark as pending and return
+            if (isRenderingBooks) {
+                pendingRender = true;
+                return;
             }
+            isRenderingBooks = true;
+            pendingRender = false;
 
-            for (const book of filteredBooks) {
-                // Create book filename using the format: book_id-main_author-minor_online
-                const bookFilename = `${book.book_id}-${book.major_online}-${book.minor_online}`;
+            try {
+                const grid = document.getElementById('books-grid');
+                grid.innerHTML = '';
 
-                // Always check current cache status (don't rely on cached results)
-                const isCached = await cacheManager.exists('books', bookFilename);
+                // Render recent books section
+                await renderRecentBooks();
 
-                // Get author name
-                const authorName = getAuthorName(book.main_author);
+                // Show loading indicator if we're checking cache status for many books
+                if (filteredBooks.length > 50) {
+                    updateLoadingText('جاري تحديث حالة الكتب...');
+                    showLoading();
 
-                const bookCard = document.createElement('div');
-                bookCard.className = 'book-card';
-                bookCard.onclick = () => openBook(book);
+                    // Use setTimeout to allow UI to update
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
 
-                bookCard.innerHTML = `
-                    <div class="book-title">${book.book_name || 'كتاب بدون عنوان'}</div>
-                    <div class="book-meta">
-                        <span class="author-name">${authorName}</span>
-                        ${isCached ? '<span class="cached-indicator">محفوظ</span>' : ''}
-                    </div>
-                `;
+                // Build all cards first
+                const cards = [];
+                for (const book of filteredBooks) {
+                    const bookFilename = `${book.book_id}-${book.major_online}-${book.minor_online}`;
+                    const isCached = await cacheManager.exists('books', bookFilename);
+                    const authorName = getAuthorName(book.main_author);
 
-                grid.appendChild(bookCard);
+                    cards.push({
+                        book,
+                        html: `
+                            <div class="book-title">${book.book_name || 'كتاب بدون عنوان'}</div>
+                            <div class="book-meta">
+                                <span class="author-name">${authorName}</span>
+                                ${isCached ? '<span class="cached-indicator">محفوظ</span>' : ''}
+                            </div>
+                        `
+                    });
+                }
+
+                // Clear and render all at once
+                grid.innerHTML = '';
+                for (const card of cards) {
+                    const bookCard = document.createElement('div');
+                    bookCard.className = 'book-card';
+                    bookCard.onclick = () => openBook(card.book);
+                    bookCard.innerHTML = card.html;
+                    grid.appendChild(bookCard);
+                }
+
+                // Hide loading if it was shown
+                if (filteredBooks.length > 50) {
+                    hideLoading();
+                    showBooksList();
+                }
+            } finally {
+                isRenderingBooks = false;
+                // If a render was requested while we were rendering, do it now
+                if (pendingRender) {
+                    renderBooksList();
+                }
             }
+        }
 
-            // Hide loading if it was shown
-            if (filteredBooks.length > 50) {
-                hideLoading();
-                showBooksList();
+        // Render recent books section
+        let isRenderingRecent = false;
+        async function renderRecentBooks() {
+            // Prevent concurrent renders
+            if (isRenderingRecent) return;
+            isRenderingRecent = true;
+
+            try {
+                const recentBooksSection = document.getElementById('recent-books-section');
+                const recentBooksGrid = document.getElementById('recent-books-grid');
+                const searchInput = document.getElementById('search-input');
+                const recentBooks = getRecentBooks();
+
+                // Hide section if search is active or no recent books
+                const hasSearchQuery = searchInput && searchInput.value.trim() !== '';
+                if (recentBooks.length === 0 || hasSearchQuery) {
+                    recentBooksSection.classList.add('hidden');
+                    recentBooksGrid.innerHTML = '';
+                    return;
+                }
+
+                recentBooksSection.classList.remove('hidden');
+
+                // Build all cards first, then set innerHTML once
+                const cards = [];
+                for (const recentBook of recentBooks) {
+                    const book = allBooks.find(b => b.book_id === recentBook.book_id);
+                    if (!book) continue;
+
+                    const bookFilename = `${book.book_id}-${book.major_online}-${book.minor_online}`;
+                    const isCached = await cacheManager.exists('books', bookFilename);
+                    const authorName = getAuthorName(book.main_author);
+
+                    cards.push({
+                        book,
+                        html: `
+                            <div class="book-title">${book.book_name || 'كتاب بدون عنوان'}</div>
+                            <div class="book-meta">
+                                <span class="author-name">${authorName}</span>
+                                ${isCached ? '<span class="cached-indicator">محفوظ</span>' : ''}
+                            </div>
+                        `
+                    });
+                }
+
+                // Clear and render all at once
+                recentBooksGrid.innerHTML = '';
+                for (const card of cards) {
+                    const bookCard = document.createElement('div');
+                    bookCard.className = 'recent-book-card';
+                    bookCard.onclick = () => openBook(card.book);
+                    bookCard.innerHTML = card.html;
+                    recentBooksGrid.appendChild(bookCard);
+                }
+            } finally {
+                isRenderingRecent = false;
             }
         }
 
         // Open book - redirect to read.html
         function openBook(book) {
+            // Track recently opened books
+            addToRecentBooks(book);
+
             // Store complete book info in localStorage for the reader page
             localStorage.setItem('currentBook', JSON.stringify({
                 book_id: book.book_id,
@@ -764,6 +916,52 @@
 
             // Redirect to reader page
             window.location.href = 'read.html';
+        }
+
+        // Add book to recently opened list
+        function addToRecentBooks(book) {
+            const MAX_RECENT_BOOKS = 6;
+            let recentBooks = JSON.parse(localStorage.getItem('recentBooks') || '[]');
+
+            // Remove if already exists (to move to front)
+            recentBooks = recentBooks.filter(b => b.book_id !== book.book_id);
+
+            // Add to front of list
+            recentBooks.unshift({
+                book_id: book.book_id,
+                book_name: book.book_name,
+                main_author: book.main_author,
+                major_online: book.major_online,
+                minor_online: book.minor_online,
+                timestamp: Date.now()
+            });
+
+            // Keep only the most recent books
+            recentBooks = recentBooks.slice(0, MAX_RECENT_BOOKS);
+
+            localStorage.setItem('recentBooks', JSON.stringify(recentBooks));
+        }
+
+        // Get recently opened books (deduplicated, max 6)
+        function getRecentBooks() {
+            const MAX_RECENT_BOOKS = 6;
+            let recentBooks = JSON.parse(localStorage.getItem('recentBooks') || '[]');
+
+            // Deduplicate by book_id (keep first occurrence)
+            const seen = new Set();
+            recentBooks = recentBooks.filter(book => {
+                if (seen.has(book.book_id)) return false;
+                seen.add(book.book_id);
+                return true;
+            });
+
+            // Limit to max
+            recentBooks = recentBooks.slice(0, MAX_RECENT_BOOKS);
+
+            // Save cleaned data back
+            localStorage.setItem('recentBooks', JSON.stringify(recentBooks));
+
+            return recentBooks;
         }
 
         // Normalize Arabic text for better search
