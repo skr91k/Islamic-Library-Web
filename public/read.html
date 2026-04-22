@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
+
 <body>
     <div class="container">
         <!-- Loading Screen -->
@@ -52,7 +54,8 @@
                         </div>
                     </div>
                     <div class="header-controls">
-                        <button class="ai-translate-btn" onclick="toggleAiTranslate()" id="ai-translate-btn" title="AI Translation">
+                        <button class="ai-translate-btn" onclick="toggleAiTranslate()" id="ai-translate-btn"
+                            title="AI Translation">
                             🤖
                         </button>
                         <button class="theme-toggle2" onclick="toggleTheme()" id="theme-toggle">
@@ -155,14 +158,34 @@
                         </select>
                     </div>
 
-                    <!-- Model Selection -->
                     <div class="setting-group">
                         <label class="setting-label">🤖 AI Model | نموذج الذكاء الاصطناعي</label>
                         <select id="translation-model" class="setting-select" onchange="saveTranslationSettings()">
-                            <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast)</option>
-                            <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Faster)</option>
-                            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Latest)</option>
-                            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Best Quality)</option>
+
+
+                            <optgroup label="Latest Generation (Gemini 3.1  or 3.1+)">
+                                <option value="gemini-flash-lite-latest">Gemini Latest Flash Lite (Fastest & Cheapest)
+                                </option>
+                                <option value="gemini-flash-latest" selected>Gemini Latest Flash (Fast & Balanced)
+                                </option>
+                                <option value="gemini-pro-latest">Gemini Latest Pro (Highest Quality & Nuance)</option>
+                            </optgroup>
+
+
+
+                            <optgroup label="Latest Generation (Gemini 3.1)">
+                                <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Fastest & Cheapest)
+                                </option>
+                                <option value="gemini-3.1-flash" selected>Gemini 3.1 Flash (Fast & Balanced)</option>
+                                <option value="gemini-3.1-pro">Gemini 3.1 Pro (Highest Quality & Nuance)</option>
+                            </optgroup>
+
+                            <optgroup label="Previous Stable (Gemini 2.5)">
+                                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                            </optgroup>
+
                         </select>
                     </div>
 
@@ -170,11 +193,11 @@
                     <div class="setting-group">
                         <label class="setting-label">🔑 Your API Key (Optional) | مفتاح API الخاص بك</label>
                         <input type="password" id="user-api-key" class="setting-input"
-                               placeholder="Enter your Gemini API key..."
-                               onchange="saveTranslationSettings()">
+                            placeholder="Enter your Gemini API key..." onchange="saveTranslationSettings()">
                         <div class="setting-hint">
                             <strong>How to get an API key:</strong><br>
-                            1. Go to <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a><br>
+                            1. Go to <a href="https://aistudio.google.com/apikey"
+                                target="_blank">aistudio.google.com/apikey</a><br>
                             2. Sign in with Google account<br>
                             3. Click "Create API Key"<br>
                             4. Copy and paste the key here
@@ -196,6 +219,8 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script src="read_script.js"></script>
 </body>
+
 </html>

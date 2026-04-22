@@ -172,10 +172,13 @@ body {
 .header-seekbar-section .progress-container {
     flex: 1;
     margin: 0;
+    display: block;
+    min-width: 100px;
 }
 
 .header-seekbar-section .progress-bar {
     height: 10px;
+    width: 100%;
 }
 
 .page-info-text {
@@ -679,14 +682,42 @@ body {
     .header-title-section {
         min-width: auto;
         width: 100%;
+        order: 1;
     }
 
     .header-seekbar-section {
         width: 100%;
         min-width: auto;
-        padding: 0;
-        flex-direction: column;
-        gap: 8px;
+        padding: 0 10px;
+        flex-direction: row;
+        gap: 10px;
+        order: 2;
+        display: flex;
+        align-items: center;
+    }
+
+    .header-seekbar-section .progress-container {
+        flex: 1;
+        min-width: 0;
+        display: block !important;
+        margin: 0;
+    }
+
+    .header-seekbar-section .progress-bar {
+        height: 12px !important;
+        width: 100%;
+        display: block !important;
+    }
+
+    .header-seekbar-section .page-info-text {
+        white-space: nowrap;
+        font-size: 0.85rem;
+        min-width: 60px;
+        text-align: center;
+    }
+
+    .header-controls {
+        order: 3;
     }
 
     .theme-toggle {
@@ -695,8 +726,22 @@ body {
     }
 
     .navigation {
-        flex-direction: column;
-        gap: 15px;
+        flex-direction: row;
+        gap: 8px;
+        padding: 10px 15px;
+    }
+
+    .navigation .nav-btn {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        min-width: auto;
+        flex: 1;
+    }
+
+    .navigation .page-info {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+        min-width: 60px;
     }
 
     .page-controls {
@@ -709,18 +754,10 @@ body {
         font-size: 1rem;
     }
 
-    .progress-bar {
-        height: 16px;
-    }
-
-    .progress-bar:hover {
-        height: 20px;
-    }
-
     .progress-thumb {
-        width: 24px;
-        height: 24px;
-        right: -12px;
+        width: 18px;
+        height: 18px;
+        right: -9px;
     }
 }
 
