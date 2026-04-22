@@ -251,6 +251,49 @@
             margin-top: 20px;
         }
 
+        .author-filter-section {
+            background: var(--bg-secondary);
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-label {
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .filter-author-name {
+            color: var(--accent);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .clear-filter-btn {
+            background: var(--error);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .clear-filter-btn:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+
         .error {
             background: var(--error);
             color: white;
@@ -348,6 +391,15 @@
                 <input type="text" id="search-input" class="search-input" placeholder="ابحث في الكتب...">
             </div>
 
+            <!-- Author Filter Indicator -->
+            <div id="author-filter-section" class="author-filter-section hidden">
+                <div class="filter-content">
+                    <span class="filter-label">كتب المؤلف | Books by:</span>
+                    <span id="author-filter-name" class="filter-author-name"></span>
+                    <button class="clear-filter-btn" onclick="clearAuthorFilter()">✕ إزالة | Clear</button>
+                </div>
+            </div>
+
             <!-- Recent Books Section -->
             <div id="recent-books-section" class="recent-books-section hidden">
                 <div class="section-title">آخر الكتب المفتوحة | Recently Opened</div>
@@ -398,6 +450,7 @@
         let currentStorageSize = 0;
         let authorsMap = new Map(); // Cache for author names
         let searchTimeout; // For debouncing search
+        let authorFilter = null; // Current author filter from URL
 
         // Configuration
         const CONFIG = {
@@ -424,6 +477,9 @@
 
                 // Load books list
                 await loadBooksList();
+
+                // Check for author filter in URL
+                checkAuthorFilter();
 
                 // Setup search
                 setupSearch();
@@ -714,6 +770,55 @@
             renderBooksList();
         }
 
+        // Check for author filter in URL
+        function checkAuthorFilter() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const authorId = urlParams.get('author');
+
+            if (authorId) {
+                authorFilter = parseInt(authorId);
+                const authorName = getAuthorName(authorFilter);
+
+                // Filter books by author
+                filteredBooks = allBooks.filter(book => book.main_author === authorFilter);
+
+                // Show author filter indicator
+                showAuthorFilter(authorName);
+
+                // Re-render with filtered books
+                renderBooksList();
+            }
+        }
+
+        // Show author filter UI
+        function showAuthorFilter(authorName) {
+            const filterSection = document.getElementById('author-filter-section');
+            const filterNameEl = document.getElementById('author-filter-name');
+
+            if (filterSection && filterNameEl) {
+                filterNameEl.textContent = authorName;
+                filterSection.classList.remove('hidden');
+            }
+        }
+
+        // Clear author filter
+        function clearAuthorFilter() {
+            authorFilter = null;
+            filteredBooks = [...allBooks];
+
+            // Hide filter indicator
+            const filterSection = document.getElementById('author-filter-section');
+            if (filterSection) {
+                filterSection.classList.add('hidden');
+            }
+
+            // Clear URL parameter
+            window.history.replaceState({}, '', window.location.pathname);
+
+            // Re-render
+            renderBooksList();
+        }
+
         // Update statistics
         async function updateStats() {
             // Calculate storage size
@@ -852,9 +957,9 @@
                 const searchInput = document.getElementById('search-input');
                 const recentBooks = getRecentBooks();
 
-                // Hide section if search is active or no recent books
+                // Hide section if search is active, author filter is active, or no recent books
                 const hasSearchQuery = searchInput && searchInput.value.trim() !== '';
-                if (recentBooks.length === 0 || hasSearchQuery) {
+                if (recentBooks.length === 0 || hasSearchQuery || authorFilter !== null) {
                     recentBooksSection.classList.add('hidden');
                     recentBooksGrid.innerHTML = '';
                     return;

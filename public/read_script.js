@@ -25,6 +25,452 @@ function updateThemeIcon() {
 // Initialize theme on page load
 initTheme();
 
+// AI Translation toggle
+let aiTranslateEnabled = false;
+
+function initAiTranslate() {
+    aiTranslateEnabled = localStorage.getItem('aiTranslateEnabled') === 'true';
+    updateAiTranslateButton();
+}
+
+function toggleAiTranslate() {
+    aiTranslateEnabled = !aiTranslateEnabled;
+    localStorage.setItem('aiTranslateEnabled', aiTranslateEnabled.toString());
+    updateAiTranslateButton();
+
+    // Trigger or hide translation based on new state
+    if (aiTranslateEnabled) {
+        scheduleTranslation();
+    } else {
+        hideTranslation();
+    }
+}
+
+function updateAiTranslateButton() {
+    const btn = document.getElementById('ai-translate-btn');
+    if (btn) {
+        if (aiTranslateEnabled) {
+            btn.classList.add('enabled');
+            btn.title = 'AI Translation: ON';
+        } else {
+            btn.classList.remove('enabled');
+            btn.title = 'AI Translation: OFF';
+        }
+    }
+}
+
+// Initialize AI translate on page load
+initAiTranslate();
+
+// AI Translation Configuration
+const DEFAULT_API_KEY = 'AIzaSyDQCsTu3NnP-xkBSULTXvkNIQ1Y7n1_Iy8';
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+let translationTimeout = null;
+let currentTranslationController = null;
+let translationCache = null;
+
+// Translation Settings
+const defaultSettings = {
+    language: 'en',
+    style: 'readable',
+    model: 'gemini-2.0-flash',
+    apiKey: ''
+};
+
+function getTranslationSettings() {
+    const saved = localStorage.getItem('translationSettings');
+    return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+}
+
+function saveTranslationSettings() {
+    const settings = {
+        language: document.getElementById('translation-language')?.value || 'en',
+        style: document.getElementById('translation-style')?.value || 'readable',
+        model: document.getElementById('translation-model')?.value || 'gemini-2.0-flash',
+        apiKey: document.getElementById('user-api-key')?.value || ''
+    };
+    localStorage.setItem('translationSettings', JSON.stringify(settings));
+}
+
+function loadTranslationSettings() {
+    const settings = getTranslationSettings();
+    const langEl = document.getElementById('translation-language');
+    const styleEl = document.getElementById('translation-style');
+    const modelEl = document.getElementById('translation-model');
+    const apiKeyEl = document.getElementById('user-api-key');
+
+    if (langEl) langEl.value = settings.language;
+    if (styleEl) styleEl.value = settings.style;
+    if (modelEl) modelEl.value = settings.model;
+    if (apiKeyEl) apiKeyEl.value = settings.apiKey;
+
+    updateCacheCount();
+}
+
+function openTranslationSettings() {
+    loadTranslationSettings();
+    document.getElementById('translation-settings-modal')?.classList.remove('hidden');
+}
+
+function closeTranslationSettings() {
+    document.getElementById('translation-settings-modal')?.classList.add('hidden');
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('translation-settings-modal');
+    if (e.target === modal) {
+        closeTranslationSettings();
+    }
+});
+
+// Translation Cache using IndexedDB
+async function initTranslationCache() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('TranslationCache', 1);
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            translationCache = request.result;
+            resolve(translationCache);
+        };
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('translations')) {
+                db.createObjectStore('translations', { keyPath: 'id' });
+            }
+        };
+    });
+}
+
+function getCacheKey(bookId, pageNum, language) {
+    return `${bookId}_${pageNum}_${language}`;
+}
+
+async function getCachedTranslation(bookId, pageNum, language) {
+    if (!translationCache) await initTranslationCache();
+
+    return new Promise((resolve) => {
+        try {
+            const tx = translationCache.transaction('translations', 'readonly');
+            const store = tx.objectStore('translations');
+            const key = getCacheKey(bookId, pageNum, language);
+            const request = store.get(key);
+
+            request.onsuccess = () => resolve(request.result?.text || null);
+            request.onerror = () => resolve(null);
+        } catch (e) {
+            resolve(null);
+        }
+    });
+}
+
+async function setCachedTranslation(bookId, pageNum, language, text) {
+    if (!translationCache) await initTranslationCache();
+
+    return new Promise((resolve) => {
+        try {
+            const tx = translationCache.transaction('translations', 'readwrite');
+            const store = tx.objectStore('translations');
+            const key = getCacheKey(bookId, pageNum, language);
+            store.put({ id: key, bookId, pageNum, language, text, timestamp: Date.now() });
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+        } catch (e) {
+            resolve(false);
+        }
+    });
+}
+
+async function clearTranslationCache() {
+    if (!translationCache) await initTranslationCache();
+
+    return new Promise((resolve) => {
+        try {
+            const tx = translationCache.transaction('translations', 'readwrite');
+            const store = tx.objectStore('translations');
+            store.clear();
+            tx.oncomplete = () => {
+                updateCacheCount();
+                alert('Translation cache cleared successfully!');
+                resolve(true);
+            };
+            tx.onerror = () => resolve(false);
+        } catch (e) {
+            resolve(false);
+        }
+    });
+}
+
+async function updateCacheCount() {
+    if (!translationCache) {
+        try {
+            await initTranslationCache();
+        } catch (e) {
+            return;
+        }
+    }
+
+    try {
+        const tx = translationCache.transaction('translations', 'readonly');
+        const store = tx.objectStore('translations');
+        const request = store.count();
+
+        request.onsuccess = () => {
+            const countEl = document.getElementById('cache-count');
+            if (countEl) countEl.textContent = request.result;
+        };
+    } catch (e) {
+        console.error('Error counting cache:', e);
+    }
+}
+
+// Language names for display
+const languageNames = {
+    en: 'English',
+    ur: 'Urdu',
+    fr: 'French',
+    de: 'German',
+    es: 'Spanish',
+    tr: 'Turkish',
+    id: 'Indonesian',
+    ms: 'Malay',
+    bn: 'Bengali',
+    hi: 'Hindi'
+};
+
+// Style prompts
+const stylePrompts = {
+    readable: 'Translate in an easy-to-read, flowing style that is accessible to general readers.',
+    literal: 'Provide a literal, word-by-word translation that stays close to the original Arabic structure.',
+    scholarly: 'Translate in an academic, scholarly style with precise terminology suitable for researchers.',
+    simple: 'Translate using simple, basic vocabulary suitable for beginners and non-native speakers.'
+};
+
+function buildTranslationPrompt(arabicText, settings) {
+    const langName = languageNames[settings.language] || 'English';
+    const styleGuide = stylePrompts[settings.style] || stylePrompts.readable;
+
+    return `You are a translator specializing in Islamic texts. Translate the following Arabic text to ${langName}.
+
+${styleGuide}
+
+Important guidelines:
+- Preserve the religious meaning and context
+- Keep Islamic terms like Allah, Quran, Hadith, etc. as transliterations when appropriate
+- Only return the translation, no explanations or notes
+
+Arabic text:
+${arabicText}`;
+}
+
+async function translateWithGemini(arabicText) {
+    // Cancel any pending translation
+    if (currentTranslationController) {
+        currentTranslationController.abort();
+    }
+    currentTranslationController = new AbortController();
+
+    const settings = getTranslationSettings();
+    const apiKey = settings.apiKey || DEFAULT_API_KEY;
+    const model = settings.model || 'gemini-2.0-flash';
+    const apiUrl = `${GEMINI_API_BASE}${model}:generateContent?key=${apiKey}`;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: buildTranslationPrompt(arabicText, settings)
+                    }]
+                }],
+                generationConfig: {
+                    temperature: 0.3,
+                    maxOutputTokens: 4096
+                }
+            }),
+            signal: currentTranslationController.signal
+        });
+
+        if (response.status === 429) {
+            return { error: 'quota_exceeded', message: 'API quota exceeded. Please try again later or add your own API key in settings.' };
+        }
+
+        if (!response.ok) {
+            return { error: 'api_error', message: 'Translation failed. Please try again.' };
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return { success: true, text };
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return null; // Cancelled, not an error
+        }
+        console.error('Translation error:', error);
+        return { error: 'network_error', message: 'Network error. Please check your connection.' };
+    }
+}
+
+function scheduleTranslation() {
+    // Clear any pending translation
+    if (translationTimeout) {
+        clearTimeout(translationTimeout);
+    }
+
+    // Don't translate if disabled
+    if (!aiTranslateEnabled) {
+        hideTranslation();
+        return;
+    }
+
+    // Show loading indicator
+    showTranslationLoading();
+
+    // Debounce: wait 1 second before translating
+    translationTimeout = setTimeout(async () => {
+        const pageContent = document.getElementById('page-content');
+        const originalText = pageContent?.innerText || '';
+
+        if (!originalText.trim()) {
+            hideTranslation();
+            return;
+        }
+
+        const settings = getTranslationSettings();
+        const bookId = bookInfo?.book_id || 0;
+        const pageNum = currentPage;
+        const language = settings.language;
+
+        // Check cache first
+        const cachedTranslation = await getCachedTranslation(bookId, pageNum, language);
+        if (cachedTranslation) {
+            if (aiTranslateEnabled) {
+                showTranslation(cachedTranslation, true); // true = from cache
+            }
+            return;
+        }
+
+        const result = await translateWithGemini(originalText);
+
+        if (!result) {
+            // Cancelled
+            return;
+        }
+
+        if (!aiTranslateEnabled) {
+            hideTranslation();
+            return;
+        }
+
+        if (result.error) {
+            showTranslationError(result.message);
+        } else if (result.success) {
+            // Save to cache
+            await setCachedTranslation(bookId, pageNum, language, result.text);
+            showTranslation(result.text, false);
+        }
+    }, 1000);
+}
+
+function showTranslationLoading() {
+    let translationDiv = document.getElementById('translation-content');
+    if (!translationDiv) {
+        createTranslationContainer();
+        translationDiv = document.getElementById('translation-content');
+    }
+
+    const settings = getTranslationSettings();
+    const langName = languageNames[settings.language] || 'English';
+    const headerEl = document.getElementById('translation-header-text');
+    if (headerEl) {
+        headerEl.innerHTML = `🤖 ${langName} Translation <span class="settings-icon">⚙️</span>`;
+    }
+
+    translationDiv.innerHTML = '<div class="translation-loading">🤖 Translating...</div>';
+    document.getElementById('translation-container').classList.remove('hidden');
+}
+
+function showTranslation(text, fromCache = false) {
+    let translationDiv = document.getElementById('translation-content');
+    if (!translationDiv) {
+        createTranslationContainer();
+        translationDiv = document.getElementById('translation-content');
+    }
+
+    // Update header with language and cache status
+    const settings = getTranslationSettings();
+    const langName = languageNames[settings.language] || 'English';
+    const cacheIndicator = fromCache ? ' 💾' : '';
+    const headerEl = document.getElementById('translation-header-text');
+    if (headerEl) {
+        headerEl.innerHTML = `🤖 ${langName} Translation${cacheIndicator} <span class="settings-icon">⚙️</span>`;
+    }
+
+    translationDiv.innerHTML = text.replace(/\n/g, '<br>');
+    document.getElementById('translation-container').classList.remove('hidden');
+    document.getElementById('original-header')?.classList.remove('hidden');
+}
+
+function hideTranslation() {
+    const container = document.getElementById('translation-container');
+    if (container) {
+        container.classList.add('hidden');
+    }
+    const originalHeader = document.getElementById('original-header');
+    if (originalHeader) {
+        originalHeader.classList.add('hidden');
+    }
+    if (translationTimeout) {
+        clearTimeout(translationTimeout);
+    }
+}
+
+function showTranslationError(message) {
+    let translationDiv = document.getElementById('translation-content');
+    if (!translationDiv) {
+        createTranslationContainer();
+        translationDiv = document.getElementById('translation-content');
+    }
+    translationDiv.innerHTML = `<div class="translation-error">⚠️ ${message}</div>`;
+    document.getElementById('translation-container').classList.remove('hidden');
+    document.getElementById('original-header')?.classList.remove('hidden');
+}
+
+function createTranslationContainer() {
+    const pageContent = document.getElementById('page-content');
+    if (!pageContent) return;
+
+    const settings = getTranslationSettings();
+    const langName = languageNames[settings.language] || 'English';
+
+    // Create translation container
+    const container = document.createElement('div');
+    container.id = 'translation-container';
+    container.className = 'translation-container hidden';
+    container.innerHTML = `
+        <div class="translation-header clickable" onclick="openTranslationSettings()" id="translation-header-text">
+            🤖 ${langName} Translation <span class="settings-icon">⚙️</span>
+        </div>
+        <div id="translation-content" class="translation-content"></div>
+    `;
+
+    // Create original content header
+    const originalHeader = document.createElement('div');
+    originalHeader.id = 'original-header';
+    originalHeader.className = 'original-header hidden';
+    originalHeader.innerHTML = '📖 النص العربي الأصلي | Arabic Original';
+
+    // Insert BEFORE page-content so translation shows first
+    pageContent.parentNode.insertBefore(container, pageContent);
+    pageContent.parentNode.insertBefore(originalHeader, pageContent);
+}
+
 // Global variables
 let sqlWorker;
 let currentBookDb;
@@ -56,6 +502,9 @@ async function init() {
 
         // Load the book
         await loadBook();
+
+        // Initialize translation cache
+        await initTranslationCache();
 
         hideLoading();
         showReader();
@@ -343,9 +792,7 @@ async function loadBookPages() {
     
     currentPage = 1;
     document.getElementById('book-title-header').textContent = bookInfo.book_name;
-    document.getElementById('book-title').textContent = bookInfo.book_name;
     document.getElementById('book-author-header').textContent = bookInfo.author_name || '';
-    document.getElementById('book-author').textContent = bookInfo.author_name || '';
     document.getElementById('goto-input').max = totalPages;
     
     updatePageDisplay();
@@ -357,23 +804,26 @@ async function loadBookPages() {
 function loadCurrentPage() {
     const stmt = currentBookDb.prepare("SELECT * FROM page ORDER BY id LIMIT 1 OFFSET ?");
     stmt.bind([currentPage - 1]);
-    
+
     if (stmt.step()) {
         const page = stmt.getAsObject();
         let content = page.content || 'لا يوجد محتوى لهذه الصفحة';
-        
+
         // Clean HTML tags for better display but preserve some formatting
        // content = content.replace(/<span[^>]*>/g, '').replace(/<\/span>/g, '');
         //content = content.replace(/<[^>]*>/g, '').trim();
-        
+
         document.getElementById('page-content').innerHTML = content;
     } else {
         document.getElementById('page-content').textContent = 'خطأ في تحميل الصفحة';
     }
-    
+
     stmt.free();
     updateNavigationButtons();
     updateProgressBar();
+
+    // Schedule AI translation (debounced)
+    scheduleTranslation();
 }
 
 // Navigation functions
@@ -466,7 +916,13 @@ function goBack() {
 }
 
 function goHome() {
-    window.location.href = 'index.html';
+    window.location.href = 'home.html';
+}
+
+function filterByAuthor() {
+    if (bookInfo && bookInfo.main_author) {
+        window.location.href = `home.html?author=${bookInfo.main_author}`;
+    }
 }
 
 // Keyboard navigation

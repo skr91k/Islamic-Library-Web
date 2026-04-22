@@ -18,20 +18,8 @@
             <p>جاري تحميل الكتاب...</p>
         </div>
 
-        <!-- Book Info -->
-        <div id="book-info" class="book-info hidden">
-            <h2 id="book-title">اسم الكتاب</h2>
-            <div id="book-author" class="book-author"></div>
-            <div class="progress-container">
-                <div class="progress-bar" id="progress-bar">
-                    <div class="progress-fill" id="progress-fill">
-                        <div class="progress-thumb" id="progress-thumb"></div>
-                    </div>
-                </div>
-                <div class="progress-tooltip" id="progress-tooltip">الصفحة 1</div>
-            </div>
-            <p>الصفحة <span id="current-page-info">1</span> من <span id="total-pages-info">1</span></p>
-        </div>
+        <!-- Book Info - Now just title display -->
+        <div id="book-info" class="book-info hidden"></div>
 
         <!-- Page Controls -->
         <div id="page-controls" class="page-controls hidden" style="display: none !important;">
@@ -46,13 +34,30 @@
         <div id="book-reader" class="hidden">
             <div class="reader-container">
                 <div class="reader-header">
-                    <div class="reader-title" id="book-title-header"></div>
-                    <div class="reader-author" id="book-author-header"></div>
+                    <div class="header-title-section">
+                        <div class="reader-title" id="book-title-header"></div>
+                        <div class="reader-author clickable" id="book-author-header" onclick="filterByAuthor()"></div>
+                    </div>
+                    <div class="header-seekbar-section">
+                        <div class="progress-container">
+                            <div class="progress-bar" id="progress-bar">
+                                <div class="progress-fill" id="progress-fill">
+                                    <div class="progress-thumb" id="progress-thumb"></div>
+                                </div>
+                            </div>
+                            <div class="progress-tooltip" id="progress-tooltip">الصفحة 1</div>
+                        </div>
+                        <div class="page-info-text">
+                            <span id="current-page-info">1</span> / <span id="total-pages-info">1</span>
+                        </div>
+                    </div>
                     <div class="header-controls">
+                        <button class="ai-translate-btn" onclick="toggleAiTranslate()" id="ai-translate-btn" title="AI Translation">
+                            🤖
+                        </button>
                         <button class="theme-toggle2" onclick="toggleTheme()" id="theme-toggle">
                             🌙
                         </button>
-                        <button class="home-btn" onclick="goHome()">🏠</button>
                         <button class="back-btn" onclick="goBack()">⬅️</button>
                     </div>
                 </div>
@@ -81,6 +86,82 @@
 
         <!-- Error Display -->
         <div id="error-message" class="error hidden"></div>
+
+        <!-- Translation Settings Modal -->
+        <div id="translation-settings-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>⚙️ Translation Settings | إعدادات الترجمة</h3>
+                    <button class="modal-close" onclick="closeTranslationSettings()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Language Selection -->
+                    <div class="setting-group">
+                        <label class="setting-label">🌍 Target Language | اللغة المستهدفة</label>
+                        <select id="translation-language" class="setting-select" onchange="saveTranslationSettings()">
+                            <option value="en">English</option>
+                            <option value="ur">اردو (Urdu)</option>
+                            <option value="fr">Français (French)</option>
+                            <option value="de">Deutsch (German)</option>
+                            <option value="es">Español (Spanish)</option>
+                            <option value="tr">Türkçe (Turkish)</option>
+                            <option value="id">Bahasa Indonesia</option>
+                            <option value="ms">Bahasa Melayu</option>
+                            <option value="bn">বাংলা (Bengali)</option>
+                            <option value="hi">हिन्दी (Hindi)</option>
+                        </select>
+                    </div>
+
+                    <!-- Translation Style -->
+                    <div class="setting-group">
+                        <label class="setting-label">📝 Translation Style | نمط الترجمة</label>
+                        <select id="translation-style" class="setting-select" onchange="saveTranslationSettings()">
+                            <option value="readable">Easy to Read | سهلة القراءة</option>
+                            <option value="literal">Literal/Word-by-Word | حرفية</option>
+                            <option value="scholarly">Scholarly/Academic | أكاديمية</option>
+                            <option value="simple">Simple/Basic | مبسطة</option>
+                        </select>
+                    </div>
+
+                    <!-- Model Selection -->
+                    <div class="setting-group">
+                        <label class="setting-label">🤖 AI Model | نموذج الذكاء الاصطناعي</label>
+                        <select id="translation-model" class="setting-select" onchange="saveTranslationSettings()">
+                            <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast)</option>
+                            <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Faster)</option>
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Latest)</option>
+                            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Best Quality)</option>
+                        </select>
+                    </div>
+
+                    <!-- API Key -->
+                    <div class="setting-group">
+                        <label class="setting-label">🔑 Your API Key (Optional) | مفتاح API الخاص بك</label>
+                        <input type="password" id="user-api-key" class="setting-input"
+                               placeholder="Enter your Gemini API key..."
+                               onchange="saveTranslationSettings()">
+                        <div class="setting-hint">
+                            <strong>How to get an API key:</strong><br>
+                            1. Go to <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a><br>
+                            2. Sign in with Google account<br>
+                            3. Click "Create API Key"<br>
+                            4. Copy and paste the key here
+                        </div>
+                    </div>
+
+                    <!-- Cache Management -->
+                    <div class="setting-group">
+                        <label class="setting-label">💾 Translation Cache | ذاكرة التخزين المؤقت</label>
+                        <div class="cache-info">
+                            <span id="cache-count">0</span> translations saved
+                        </div>
+                        <button class="setting-btn danger" onclick="clearTranslationCache()">
+                            🗑️ Clear All Cached Translations
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="read_script.js"></script>
