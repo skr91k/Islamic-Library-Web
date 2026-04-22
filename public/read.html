@@ -5,24 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>قارئ الكتب - Islamic Books Reader</title>
-
-    <!-- SEO Meta Tags -->
-    <meta name="description"
-        content="قارئ الكتب الإسلامية - اقرأ الكتب الإسلامية مع ترجمة آلية. Islamic book reader with AI translation support.">
-    <meta name="robots" content="index, follow">
-    <meta name="keywords"
-        content="قارئ كتب إسلامية, Islamic book reader, Arabic book reader, قراءة كتب, ترجمة كتب إسلامية, Islamic books translation">
-
-    <!-- Open Graph -->
-    <meta property="og:type" content="article">
-    <meta property="og:title" content="قارئ الكتب - Islamic Books Reader">
-    <meta property="og:description" content="قارئ الكتب الإسلامية مع ترجمة آلية">
-    <meta property="og:locale" content="ar_SA">
-
-    <!-- Theme -->
-    <meta name="theme-color" content="#667eea">
-    <meta name="mobile-web-app-capable" content="yes">
-
+    <meta name="robots" content="noindex, nofollow">
     <link rel="stylesheet" href="read_styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -85,28 +68,44 @@
 
                 <!-- Top Navigation -->
                 <div class="navigation navigation-top">
-                    <button class="nav-btn" id="prev-btn-top" onclick="previousPage(false)">الصفحة السابقة</button>
-                    <div class="page-info">
-                        <span id="current-page-top">1</span> / <span id="total-pages-top">1</span>
+                    <div class="nav-group">
+                        <button class="nav-btn" id="prev-btn-top" onclick="previousPage(false)">→</button>
+                        <div class="page-info">
+                            <span id="current-page-top">1</span> / <span id="total-pages-top">1</span>
+                        </div>
+                        <button class="nav-btn" id="next-btn-top" onclick="nextPage(false)">←</button>
                     </div>
-                    <button class="nav-btn" id="next-btn-top" onclick="nextPage(false)">الصفحة التالية</button>
+                    <div class="nav-subtitle" id="nav-subtitle" onclick="showTableOfContents()"></div>
                 </div>
 
                 <div class="page-content" id="page-content"></div>
 
                 <!-- Bottom Navigation -->
                 <div class="navigation navigation-bottom">
-                    <button class="nav-btn" id="prev-btn" onclick="previousPage()">الصفحة السابقة</button>
-                    <div class="page-info">
-                        <span id="current-page">1</span> / <span id="total-pages">1</span>
+                    <div class="nav-group">
+                        <button class="nav-btn" id="prev-btn" onclick="previousPage()">→</button>
+                        <div class="page-info">
+                            <span id="current-page">1</span> / <span id="total-pages">1</span>
+                        </div>
+                        <button class="nav-btn" id="next-btn" onclick="nextPage()">←</button>
                     </div>
-                    <button class="nav-btn" id="next-btn" onclick="nextPage()">الصفحة التالية</button>
                 </div>
             </div>
         </div>
 
         <!-- Error Display -->
         <div id="error-message" class="error hidden"></div>
+
+        <!-- Table of Contents Modal -->
+        <div id="toc-modal" class="modal hidden">
+            <div class="modal-content toc-modal-content">
+                <div class="modal-header">
+                    <h3>📑 الفهرس | Table of Contents</h3>
+                    <button class="modal-close" onclick="closeTableOfContents()">✕</button>
+                </div>
+                <div class="modal-body toc-list" id="toc-list"></div>
+            </div>
+        </div>
 
         <!-- Translation Settings Modal -->
         <div id="translation-settings-modal" class="modal hidden">

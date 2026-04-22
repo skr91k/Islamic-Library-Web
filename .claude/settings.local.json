@@ -3,7 +3,8 @@
     "allow": [
       "Bash(ls:*)",
       "Bash(curl:*)",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(sqlite3:*)"
     ]
   }
 }

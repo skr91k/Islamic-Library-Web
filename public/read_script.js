@@ -348,7 +348,7 @@ async function translateWithGemini(arabicText) {
             try {
                 const errorData = await response.json();
                 errorDetails = errorData?.error?.message || errorDetails;
-            } catch (e) {}
+            } catch (e) { }
             return { error: 'api_key_invalid', details: errorDetails };
         }
 
@@ -357,7 +357,7 @@ async function translateWithGemini(arabicText) {
             try {
                 const errorData = await response.json();
                 errorDetails = errorData?.error?.message || errorDetails;
-            } catch (e) {}
+            } catch (e) { }
             return { error: 'api_error', details: errorDetails };
         }
 
@@ -521,11 +521,11 @@ function showTranslationError(errorType, details = '') {
             break;
         case 'api_key_invalid':
             errorMessage = 'Invalid API key | مفتاح API غير صالح';
-            suggestion = 'Please check your API key in settings.<br>يرجى التحقق من مفتاح API في الإعدادات.';
+            suggestion = 'Please check your API key in settings.<br>يرجى التحقق من مفتاح API في الإعدادات.<br>Try changing the model, add your own API key, or wait and try again later.<br>جرب تغيير النموذج، أو إضافة مفتاح API الخاص بك، أو الانتظار والمحاولة لاحقاً.';
             break;
         case 'network_error':
             errorMessage = 'Network error | خطأ في الاتصال';
-            suggestion = 'Please check your internet connection and try again.<br>يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.';
+            suggestion = 'Please check your internet connection and try again.<br>يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.<br>Try changing the model, add your own API key, or wait and try again later.<br>جرب تغيير النموذج، أو إضافة مفتاح API الخاص بك، أو الانتظار والمحاولة لاحقاً.';
             break;
         default:
             errorMessage = 'Translation failed | فشلت الترجمة';
@@ -737,6 +737,7 @@ let totalPages = 1;
 let bookInfo = null;
 let CONFIG = null;
 let isDragging = false;
+let bookTitles = []; // Array of {content, page} for subtitle display
 
 // Initialize the reader
 async function init() {
@@ -1056,6 +1057,77 @@ async function loadBookPages() {
     updatePageDisplay();
     updateProgressBar();
     loadCurrentPage();
+
+    // Load titles for subtitle display (async, low priority)
+    setTimeout(loadTitles, 100);
+}
+
+// Load titles table for subtitle display
+function loadTitles() {
+    try {
+        const stmt = currentBookDb.prepare("SELECT content, page FROM title ORDER BY page ASC");
+        bookTitles = [];
+        while (stmt.step()) {
+            const row = stmt.getAsObject();
+            bookTitles.push({ content: row.content, page: row.page });
+        }
+        stmt.free();
+        updateSubtitle();
+    } catch (e) {
+        // Title table may not exist in some books
+        bookTitles = [];
+    }
+}
+
+// Get subtitle for current page
+function updateSubtitle() {
+    const subtitleEl = document.getElementById('nav-subtitle');
+    if (!subtitleEl || bookTitles.length === 0) return;
+
+    // Find the title where page <= currentPage (highest such page)
+    let subtitle = '';
+    for (let i = bookTitles.length - 1; i >= 0; i--) {
+        if (bookTitles[i].page <= currentPage) {
+            subtitle = bookTitles[i].content || '';
+            break;
+        }
+    }
+    subtitleEl.textContent = subtitle;
+}
+
+// Show table of contents modal
+function showTableOfContents() {
+    if (bookTitles.length === 0) return;
+
+    const modal = document.getElementById('toc-modal');
+    const tocList = document.getElementById('toc-list');
+
+    // Build TOC list
+    tocList.innerHTML = bookTitles.map((title, index) => {
+        const isActive = (index === bookTitles.length - 1 || bookTitles[index + 1].page > currentPage) && title.page <= currentPage;
+        return `<div class="toc-item ${isActive ? 'active' : ''}" onclick="goToTocPage(${title.page})">
+            <span class="toc-item-title">${title.content}</span>
+            <span class="toc-item-page">${title.page}</span>
+        </div>`;
+    }).join('');
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+}
+
+// Close table of contents modal
+function closeTableOfContents() {
+    const modal = document.getElementById('toc-modal');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+}
+
+// Navigate to TOC page
+function goToTocPage(page) {
+    closeTableOfContents();
+    currentPage = page;
+    updatePageDisplay();
+    loadCurrentPage();
 }
 
 // Load current page content
@@ -1082,6 +1154,9 @@ function loadCurrentPage() {
 
     // Schedule AI translation (debounced)
     scheduleTranslation();
+
+    // Update subtitle (low priority, after content loaded)
+    updateSubtitle();
 }
 
 // Navigation functions

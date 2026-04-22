@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="master2.sqlite">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/public/master2.sqlite.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

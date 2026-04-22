@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="master.sqlite.zip.backup">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/master.sqlite.zip.backup.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

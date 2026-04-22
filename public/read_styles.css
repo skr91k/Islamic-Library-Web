@@ -447,6 +447,59 @@ body {
     padding: 20px;
 }
 
+/* Table of Contents */
+.toc-modal-content {
+    max-width: 600px;
+}
+
+.toc-list {
+    padding: 10px 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.toc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    margin: 5px 0;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.toc-item:hover {
+    background: var(--bg-primary);
+    color: var(--text-light);
+    transform: translateX(-5px);
+}
+
+.toc-item.active {
+    background: var(--bg-primary);
+    color: var(--text-light);
+}
+
+.toc-item-title {
+    flex: 1;
+    font-size: 0.95rem;
+}
+
+.toc-item-page {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    margin-right: 10px;
+}
+
+.nav-subtitle {
+    cursor: pointer;
+}
+
+.nav-subtitle:hover {
+    text-decoration: underline;
+}
+
 .setting-group {
     margin-bottom: 25px;
 }
@@ -541,11 +594,10 @@ body {
 
 .navigation {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
-    padding: 20px 30px;
+    padding: 15px 20px;
     background: var(--navigation-bg);
-    flex-wrap: wrap;
     gap: 15px;
     transition: all 0.3s ease;
 }
@@ -558,16 +610,33 @@ body {
     border-top: 1px solid var(--border-color);
 }
 
+.nav-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-subtitle {
+    flex: 1;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    text-align: center;
+    padding: 0 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .nav-btn {
     background: var(--bg-primary);
     border: none;
     color: var(--text-light);
-    padding: 12px 24px;
-    border-radius: 25px;
+    padding: 10px 16px;
+    border-radius: 20px;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 1.2rem;
     transition: all 0.3s ease;
-    min-width: 120px;
+    min-width: auto;
 }
 
 .nav-btn:hover:not(:disabled) {
@@ -576,7 +645,7 @@ body {
 }
 
 .nav-btn:disabled {
-    background: var(--text-secondary);
+    opacity: 0.4;
     cursor: not-allowed;
     transform: none;
 }
@@ -815,11 +884,18 @@ body {
         padding: 10px 15px;
     }
 
+    .nav-group {
+        gap: 5px;
+    }
+
+    .nav-subtitle {
+        font-size: 0.75rem;
+    }
+
     .navigation .nav-btn {
         padding: 8px 12px;
-        font-size: 0.75rem;
+        font-size: 1rem;
         min-width: auto;
-        flex: 1;
     }
 
     .navigation .page-info {
