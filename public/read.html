@@ -236,8 +236,8 @@
                     <!-- API Key -->
                     <div class="setting-group">
                         <label class="setting-label">🔑 Your API Key (Optional) | مفتاح API الخاص بك</label>
-                        <input type="password" id="user-api-key" class="setting-input"
-                            placeholder="Enter your Gemini API key..." onchange="saveTranslationSettings()">
+                        <input type="text" id="user-api-key" class="setting-input" style="-webkit-text-security: disc;"
+                            placeholder="Enter your Gemini API key..." onchange="saveTranslationSettings()" autocomplete="off">
                         <div class="setting-hint">
                             <strong>How to get an API key:</strong><br>
                             1. Go to <a href="https://aistudio.google.com/apikey"

@@ -38,6 +38,7 @@
     <link rel="canonical" href="https://islamicbooks2.web.app/">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="config.js"></script>
     <style>
         :root {
             /* Light theme colors */
@@ -123,6 +124,7 @@
             gap: 10px;
         }
 
+        .contact-button,
         .sort-button,
         .theme-toggle,
         .storage-button {
@@ -137,6 +139,7 @@
             backdrop-filter: blur(10px);
         }
 
+        .contact-button:hover,
         .sort-button:hover,
         .theme-toggle:hover,
         .storage-button:hover {
@@ -308,9 +311,10 @@
         .filter-content {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-end;
             gap: 15px;
             flex-wrap: wrap;
+            direction: rtl;
         }
 
         .filter-label {
@@ -406,8 +410,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
         }
 
         /* AI Search Modal */
@@ -472,7 +483,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .ai-suggestion-item {
@@ -619,6 +632,22 @@
 
         .author-search-input:focus {
             border-color: var(--accent);
+        }
+
+        /* Fix select/option colors in dark mode */
+        [data-theme="dark"] select.author-search-input {
+            background-color: #34495e;
+            color: #ecf0f1;
+        }
+
+        [data-theme="dark"] select.author-search-input option {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+        }
+
+        [data-theme="dark"] select.author-search-input optgroup {
+            background-color: #34495e;
+            color: #bdc3c7;
         }
 
         .author-list {
@@ -841,6 +870,9 @@
     <div class="container">
         <div class="header">
             <div class="header-buttons">
+                <button class="contact-button" onclick="window.open('https://utilitykit.web.app/contactus?id=islamicbooks', '_blank')" title="Contact Us">
+                    ✉️
+                </button>
                 <button class="sort-button" onclick="toggleSort()" id="sort-button" title="Toggle Sort">
                     🔤
                 </button>
@@ -868,8 +900,10 @@
             <div class="search-container">
                 <div class="search-row">
                     <div class="search-input-wrapper">
-                        <input type="text" id="search-input" class="search-input" placeholder="ابحث في الكتب...">
-                        <button class="ai-search-btn" onclick="aiSearch()" title="AI Search | بحث ذكي"><img src="ai.png" alt="AI" style="width: 20px; height: 20px;"></button>
+                        <input type="text" id="search-input" class="search-input" placeholder="ابحث في الكتب..."
+                            autocomplete="off">
+                        <button class="ai-search-btn" onclick="aiSearch()" title="AI Search | بحث ذكي"><img src="ai.png"
+                                alt="AI" style="width: 20px; height: 20px;"></button>
                     </div>
                     <button class="category-btn" onclick="openCategorySearch()" title="Browse Categories">
                         📂 التصنيفات
@@ -884,7 +918,8 @@
             <div id="ai-search-modal" class="ai-modal hidden">
                 <div class="ai-modal-content">
                     <div class="ai-modal-header">
-                        <h3><img src="ai.png" alt="AI" style="width: 20px; height: 20px; vertical-align: middle;"> AI Search | بحث ذكي</h3>
+                        <h3><img src="ai.png" alt="AI" style="width: 20px; height: 20px; vertical-align: middle;"> AI
+                            Search | بحث ذكي</h3>
                         <button class="modal-close" onclick="closeAiSearch()">✕</button>
                     </div>
                     <div class="ai-modal-body" id="ai-modal-body">
@@ -897,15 +932,20 @@
             <div id="ai-settings-modal" class="author-modal hidden">
                 <div class="author-modal-content" style="max-width: 450px;">
                     <div class="author-modal-header">
-                        <h3><img src="ai.png" alt="AI" style="width: 20px; height: 20px; vertical-align: middle;"> AI Settings | إعدادات الذكاء الاصطناعي</h3>
+                        <h3><img src="ai.png" alt="AI" style="width: 20px; height: 20px; vertical-align: middle;"> AI
+                            Settings | إعدادات الذكاء الاصطناعي</h3>
                         <button class="modal-close" onclick="closeAiSettings()">✕</button>
                     </div>
                     <div style="padding: 20px;">
                         <div class="setting-group" style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> AI Model</label>
+                            <label
+                                style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary);"><img
+                                    src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> AI
+                                Model</label>
                             <select id="ai-model" class="author-search-input" onchange="saveAiSettings()">
                                 <optgroup label="Latest (Auto-Updated)">
-                                    <option value="gemini-flash-lite-latest" selected>gemini-flash-lite-latest (Default)</option>
+                                    <option value="gemini-flash-lite-latest" selected>gemini-flash-lite-latest (Default)
+                                    </option>
                                     <option value="gemini-flash-latest">gemini-flash-latest</option>
                                     <option value="gemini-pro-latest">gemini-pro-latest</option>
                                 </optgroup>
@@ -922,11 +962,14 @@
                             </select>
                         </div>
                         <div class="setting-group">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">🔑 API Key</label>
-                            <input type="password" id="ai-api-key" class="author-search-input"
-                                placeholder="Enter your Gemini API key..." onchange="saveAiSettings()">
+                            <label
+                                style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary);">🔑
+                                API Key</label>
+                            <input type="text" id="ai-api-key" class="author-search-input" style="-webkit-text-security: disc;"
+                                placeholder="Enter your Gemini API key..." onchange="saveAiSettings()" autocomplete="off" data-form-type="other">
                             <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 8px;">
-                                Get key from <a href="https://aistudio.google.com/apikey" target="_blank" style="color: var(--accent);">aistudio.google.com/apikey</a>
+                                Get key from <a href="https://aistudio.google.com/apikey" target="_blank"
+                                    style="color: var(--accent);">aistudio.google.com/apikey</a>
                             </div>
                         </div>
                     </div>
@@ -970,6 +1013,15 @@
                     <span class="filter-label">كتب المؤلف | Books by:</span>
                     <span id="author-filter-name" class="filter-author-name"></span>
                     <button class="clear-filter-btn" onclick="clearAuthorFilter()">✕ إزالة | Clear</button>
+                </div>
+            </div>
+
+            <!-- Search Filter Indicator -->
+            <div id="search-filter-section" class="category-filter-section hidden">
+                <div class="filter-content">
+                    <span class="filter-label">🔍 البحث | Search:</span>
+                    <span id="search-filter-text" class="filter-category-name"></span>
+                    <button class="clear-filter-btn" onclick="clearSearchFilter()">✕ إزالة | Clear</button>
                 </div>
             </div>
 
@@ -2057,6 +2109,8 @@
 
         // Perform search with improved filtering
         function performSearch(query) {
+            updateSearchFilterDisplay(query);
+
             if (!query || query.trim() === '') {
                 filteredBooks = [...allBooks];
                 renderBooksList();
@@ -2073,6 +2127,28 @@
                 return bookName.includes(normalizedQuery) || authorName.includes(normalizedQuery);
             });
 
+            renderBooksList();
+        }
+
+        // Update search filter display
+        function updateSearchFilterDisplay(query) {
+            const searchFilterSection = document.getElementById('search-filter-section');
+            const searchFilterText = document.getElementById('search-filter-text');
+
+            if (query && query.trim() !== '') {
+                searchFilterText.textContent = query;
+                searchFilterSection.classList.remove('hidden');
+            } else {
+                searchFilterSection.classList.add('hidden');
+            }
+        }
+
+        // Clear search filter
+        function clearSearchFilter() {
+            const searchInput = document.getElementById('search-input');
+            searchInput.value = '';
+            document.getElementById('search-filter-section').classList.add('hidden');
+            filteredBooks = [...allBooks];
             renderBooksList();
         }
 
@@ -2163,18 +2239,22 @@
         }
 
         // AI Search Functions - uses translationSettings (shared with read.html)
+        // Default API key from config.js (same as translation uses)
+        const DEFAULT_API_KEY = (typeof CONFIG_API !== 'undefined' && CONFIG_API.GEMINI_API_KEY) || '';
+
         function getAiSettings() {
             const transSettings = JSON.parse(localStorage.getItem('translationSettings') || '{}');
             return {
-                apiKey: transSettings.apiKey || '',
+                apiKey: transSettings.apiKey || DEFAULT_API_KEY,
                 model: transSettings.model || 'gemini-flash-lite-latest'
             };
         }
 
         function loadAiSettings() {
-            const settings = getAiSettings();
-            document.getElementById('ai-api-key').value = settings.apiKey;
-            document.getElementById('ai-model').value = settings.model;
+            // Only show user's saved key, not the default key
+            const transSettings = JSON.parse(localStorage.getItem('translationSettings') || '{}');
+            document.getElementById('ai-api-key').value = transSettings.apiKey || '';
+            document.getElementById('ai-model').value = transSettings.model || 'gemini-flash-lite-latest';
         }
 
         function saveAiSettings() {
@@ -2203,34 +2283,64 @@
             const modal = document.getElementById('ai-search-modal');
             const modalBody = document.getElementById('ai-modal-body');
 
+            // Show modal with search input
+            modalBody.innerHTML = `
+                <div class="ai-search-input-wrapper" style="display: flex; gap: 10px; margin: 15px; margin-bottom: 15px;">
+                    <input type="search" id="ai-search-input" class="author-search-input" style="flex: 1;"
+                        placeholder="ابحث بالذكاء الاصطناعي... | Search with AI..."
+                        value="${query.replace(/"/g, '&quot;')}" autocomplete="off" data-form-type="other">
+                    <button class="ai-search-go-btn" onclick="performAiSearch()" style="padding: 10px 20px; background: var(--accent); border: none; border-radius: 10px; color: white; cursor: pointer;">
+                        🔍
+                    </button>
+                </div>
+                <div id="ai-search-results"></div>
+                <div class="ai-settings-link" onclick="closeAiSearch(); openAiSettings();">⚙️ AI Settings</div>
+            `;
+            modal.classList.remove('hidden');
+
+            // Focus the input
+            const aiInput = document.getElementById('ai-search-input');
+            aiInput.focus();
+            aiInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') performAiSearch();
+            });
+
+            // If query exists, search immediately
+            if (query) {
+                performAiSearch();
+            }
+        }
+
+        async function performAiSearch() {
+            const query = document.getElementById('ai-search-input').value.trim();
+            const resultsDiv = document.getElementById('ai-search-results');
+
             if (!query) {
-                alert('Please enter a search query first');
+                resultsDiv.innerHTML = '<div class="ai-error">الرجاء إدخال نص للبحث | Please enter search text</div>';
                 return;
             }
 
             const settings = getAiSettings();
-            if (!settings.apiKey) {
-                modalBody.innerHTML = `
+            const apiKey = settings.apiKey || DEFAULT_API_KEY;
+            if (!apiKey) {
+                resultsDiv.innerHTML = `
                     <div class="ai-error">⚠️ API key required</div>
-                    <div class="ai-settings-link" onclick="closeAiSearch(); openAiSettings();">⚙️ Open AI Settings</div>
                 `;
-                modal.classList.remove('hidden');
                 return;
             }
 
-            // Show modal with loading state
-            modalBody.innerHTML = `
+            // Show loading state
+            resultsDiv.innerHTML = `
                 <div class="ai-loading">
                     <div class="ai-loading-spinner"></div>
                     <div>جاري البحث بالذكاء الاصطناعي...</div>
                     <div style="font-size: 0.85rem; margin-top: 5px; opacity: 0.7;">Searching with AI...</div>
                 </div>
             `;
-            modal.classList.remove('hidden');
 
             try {
                 const model = settings.model || 'gemini-flash-lite-latest';
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
                 const prompt = `You are helping search an Arabic Islamic books database. The user wants to find books matching: "${query}"
 
@@ -2268,20 +2378,18 @@ Focus on:
                 const suggestions = JSON.parse(jsonMatch[0]);
 
                 if (suggestions.length === 0) {
-                    modalBody.innerHTML = `
+                    resultsDiv.innerHTML = `
                         <div class="ai-error">لم يتم العثور على اقتراحات</div>
-                        <div class="ai-settings-link" onclick="closeAiSearch()">إغلاق | Close</div>
                     `;
                 } else {
-                    modalBody.innerHTML = suggestions.map(s =>
+                    resultsDiv.innerHTML = suggestions.map(s =>
                         `<div class="ai-suggestion-item" onclick="selectAiSuggestion('${s.replace(/'/g, "\\'")}')">${s}</div>`
-                    ).join('') + '<div class="ai-settings-link" onclick="closeAiSearch(); openAiSettings();">⚙️ AI Settings</div>';
+                    ).join('');
                 }
             } catch (error) {
                 console.error('AI Search error:', error);
-                modalBody.innerHTML = `
+                resultsDiv.innerHTML = `
                     <div class="ai-error">⚠️ ${error.message}</div>
-                    <div class="ai-settings-link" onclick="closeAiSearch(); openAiSettings();">⚙️ Open AI Settings</div>
                 `;
             }
         }

@@ -465,7 +465,7 @@ function showTranslationLoading() {
         headerEl.innerHTML = `<img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> ${langName} Translation <span class="settings-icon">⚙️</span>`;
     }
 
-    translationDiv.innerHTML = '<div class="translation-loading"><img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> Translating...</div>';
+    translationDiv.innerHTML = '<div class="translation-loading"><img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> Translating... <span class="translation-spinner"></span></div>';
     document.getElementById('translation-container').classList.remove('hidden');
 }
 
