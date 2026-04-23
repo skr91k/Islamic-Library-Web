@@ -484,6 +484,7 @@ body {
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s;
+    color: var(--text-primary);
 }
 
 .toc-item:hover {

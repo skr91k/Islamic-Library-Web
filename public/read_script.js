@@ -739,6 +739,21 @@ let CONFIG = null;
 let isDragging = false;
 let bookTitles = []; // Array of {content, page} for subtitle display
 
+// Reading progress management
+function saveReadingProgress() {
+    if (bookInfo && bookInfo.book_id) {
+        localStorage.setItem(`reading_progress_${bookInfo.book_id}`, currentPage.toString());
+    }
+}
+
+function getReadingProgress() {
+    if (bookInfo && bookInfo.book_id) {
+        const saved = localStorage.getItem(`reading_progress_${bookInfo.book_id}`);
+        return saved ? parseInt(saved, 10) : 1;
+    }
+    return 1;
+}
+
 // Initialize the reader
 async function init() {
     try {
@@ -858,6 +873,7 @@ function handleSeekEnd(e) {
     const targetPage = Math.max(1, Math.min(totalPages, Math.round(clampedPosition * totalPages)));
 
     currentPage = targetPage;
+    updatePageDisplay();
     loadCurrentPage();
     scrollToTop();
 
@@ -1049,7 +1065,9 @@ async function loadBookPages() {
     totalPages = stmt.getAsObject().count;
     stmt.free();
 
-    currentPage = 1;
+    // Restore last read page or start at page 1
+    const savedPage = getReadingProgress();
+    currentPage = Math.min(savedPage, totalPages);
     document.getElementById('book-title-header').textContent = bookInfo.book_name;
     document.getElementById('book-author-header').textContent = bookInfo.author_name || '';
     document.getElementById('goto-input').max = totalPages;
@@ -1065,7 +1083,7 @@ async function loadBookPages() {
 // Load titles table for subtitle display
 function loadTitles() {
     try {
-        const stmt = currentBookDb.prepare("SELECT content, page FROM title ORDER BY page ASC");
+        const stmt = currentBookDb.prepare("SELECT content, page FROM title ORDER BY CAST(page AS INTEGER) ASC");
         bookTitles = [];
         while (stmt.step()) {
             const row = stmt.getAsObject();
@@ -1211,6 +1229,9 @@ function updatePageDisplay() {
     document.getElementById('total-pages').textContent = totalPages;
     document.getElementById('total-pages-top').textContent = totalPages;
     document.getElementById('total-pages-info').textContent = totalPages;
+
+    // Save reading progress
+    saveReadingProgress();
 }
 
 function updateProgressBar() {
