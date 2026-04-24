@@ -29,7 +29,22 @@ initTheme();
 let aiTranslateEnabled = false;
 
 function initAiTranslate() {
-    aiTranslateEnabled = localStorage.getItem('aiTranslateEnabled') === 'true';
+    // Check URL for AI parameter first - it takes precedence
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlAi = urlParams.get('ai');
+
+    if (urlAi === '1') {
+        aiTranslateEnabled = true;
+        // Save to localStorage so it persists
+        localStorage.setItem('aiTranslateEnabled', 'true');
+    } else if (urlAi === '0') {
+        aiTranslateEnabled = false;
+        localStorage.setItem('aiTranslateEnabled', 'false');
+    } else {
+        // No URL parameter, use localStorage
+        aiTranslateEnabled = localStorage.getItem('aiTranslateEnabled') === 'true';
+    }
+
     updateAiTranslateButton();
 }
 
@@ -37,6 +52,9 @@ function toggleAiTranslate() {
     aiTranslateEnabled = !aiTranslateEnabled;
     localStorage.setItem('aiTranslateEnabled', aiTranslateEnabled.toString());
     updateAiTranslateButton();
+
+    // Update URL with AI state
+    updateUrlParams();
 
     // Trigger or hide translation based on new state
     if (aiTranslateEnabled) {
@@ -81,9 +99,22 @@ const defaultSettings = {
     apiKey: ''
 };
 
-function getTranslationSettings() {
+function getTranslationSettings(skipUrlCheck = false) {
     const saved = localStorage.getItem('translationSettings');
-    return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+    let settings = saved ? { ...defaultSettings, ...JSON.parse(saved) } : { ...defaultSettings };
+
+    // Check URL for language parameter - it takes precedence (only on initial load)
+    if (!skipUrlCheck) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlLang = urlParams.get('lang');
+        if (urlLang) {
+            settings.language = urlLang;
+            // Save to localStorage so it persists
+            localStorage.setItem('translationSettings', JSON.stringify(settings));
+        }
+    }
+
+    return settings;
 }
 
 function saveTranslationSettings() {
@@ -94,6 +125,9 @@ function saveTranslationSettings() {
         apiKey: document.getElementById('user-api-key')?.value || ''
     };
     localStorage.setItem('translationSettings', JSON.stringify(settings));
+
+    // Update URL with new language setting
+    updateUrlParams();
 }
 
 let settingsBeforeOpen = null;
@@ -125,9 +159,14 @@ function closeTranslationSettings() {
 
     // Check if settings changed and re-translate if needed
     const currentSettings = JSON.stringify(getTranslationSettings());
-    if (settingsBeforeOpen !== currentSettings && aiTranslateEnabled) {
-        // Settings changed, re-translate current page
-        scheduleTranslation();
+    if (settingsBeforeOpen !== currentSettings) {
+        // Update URL with new settings
+        updateUrlParams();
+
+        if (aiTranslateEnabled) {
+            // Settings changed, re-translate current page
+            scheduleTranslation();
+        }
     }
     settingsBeforeOpen = null;
 }
@@ -754,19 +793,168 @@ function getReadingProgress() {
     return 1;
 }
 
+// Get book info from URL parameters
+function getBookInfoFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const bookId = urlParams.get('bookid');
+
+    if (!bookId) return null;
+
+    return {
+        book_id: parseInt(bookId, 10)
+    };
+}
+
+// Fetch book details from master database by book_id
+async function fetchBookDetailsFromMaster(bookId) {
+    try {
+        // Load master database if not already loaded
+        if (!window.masterDbCache) {
+            const response = await fetch('./master2.sqlite.zip');
+            const arrayBuffer = await response.arrayBuffer();
+
+            const zip = await JSZip.loadAsync(arrayBuffer);
+            let sqliteFile = null;
+            for (const [filename, file] of Object.entries(zip.files)) {
+                if (filename.endsWith('.sqlite') || filename.endsWith('.db')) {
+                    sqliteFile = file;
+                    break;
+                }
+            }
+
+            if (!sqliteFile) {
+                throw new Error('Master database not found in archive');
+            }
+
+            const sqliteData = await sqliteFile.async('uint8array');
+            const SQL = await initSqlJs({
+                locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+            });
+            window.masterDbCache = new SQL.Database(sqliteData);
+        }
+
+        const db = window.masterDbCache;
+        const stmt = db.prepare("SELECT * FROM book WHERE book_id = ?");
+        stmt.bind([bookId]);
+
+        if (stmt.step()) {
+            const book = stmt.getAsObject();
+            stmt.free();
+
+            // Fetch author name
+            const authorStmt = db.prepare("SELECT author_name FROM author WHERE author_id = ?");
+            authorStmt.bind([book.main_author]);
+            let authorName = '';
+            if (authorStmt.step()) {
+                authorName = authorStmt.getAsObject().author_name;
+            }
+            authorStmt.free();
+
+            return {
+                book_id: book.book_id,
+                book_name: book.book_name,
+                main_author: book.main_author,
+                author_name: authorName,
+                major_online: book.major_online,
+                minor_online: book.minor_online
+            };
+        }
+
+        stmt.free();
+        return null;
+    } catch (error) {
+        console.error('Error fetching book details from master DB:', error);
+        return null;
+    }
+}
+
+// Update URL with book parameters (for shareability)
+function updateUrlWithBookInfo(info, page = null, language = null, aiEnabled = null) {
+    const params = new URLSearchParams();
+    // Only include bookid - other details can be fetched from master DB
+    params.set('bookid', info.book_id);
+
+    // Add page number if provided
+    if (page && page > 1) {
+        params.set('page', page);
+    }
+
+    // Add language if provided and not default English
+    if (language && language !== 'en') {
+        params.set('lang', language);
+    }
+
+    // Add AI translation state if enabled
+    if (aiEnabled === true) {
+        params.set('ai', '1');
+    }
+
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+}
+
+// Update URL with current page and language (call this when page or language changes)
+function updateUrlParams() {
+    if (!bookInfo) return;
+
+    const settings = getTranslationSettings(true); // Skip URL check to avoid circular logic
+    updateUrlWithBookInfo(bookInfo, currentPage, settings.language, aiTranslateEnabled);
+}
+
 // Initialize the reader
 async function init() {
     try {
-        // Get book info from localStorage
+        // First check URL parameters for book info (for shareable links)
+        let urlBookInfo = getBookInfoFromUrl();
+
+        // Then check localStorage as fallback
         const storedBookInfo = localStorage.getItem('currentBook');
-        if (!storedBookInfo) {
+
+        if (urlBookInfo) {
+            // URL has book_id - fetch full details from master DB
+            updateLoadingText('جاري تحميل معلومات الكتاب... | Loading book info...');
+            const fullBookInfo = await fetchBookDetailsFromMaster(urlBookInfo.book_id);
+
+            if (!fullBookInfo) {
+                showError('لم يتم العثور على الكتاب | Book not found');
+                setTimeout(() => window.location.href = "/", 2000);
+                return;
+            }
+
+            bookInfo = fullBookInfo;
+
+            // Also get config from localStorage if available
+            if (storedBookInfo) {
+                const stored = JSON.parse(storedBookInfo);
+                bookInfo.config = stored.config;
+            }
+
+            // Save to localStorage for future use
+            localStorage.setItem('currentBook', JSON.stringify({
+                ...bookInfo,
+                config: bookInfo.config || {
+                    bookUrlPrefix: 'https://islamicbooks-b13c0.web.app/sqlite/',
+                    dbName: 'booksCache',
+                    version: 3
+                }
+            }));
+        } else if (storedBookInfo) {
+            // No URL params but have localStorage - use it and update URL
+            bookInfo = JSON.parse(storedBookInfo);
+            updateUrlWithBookInfo(bookInfo);
+        } else {
+            // No book info anywhere - redirect to home
             window.location.href = "/";
-            //showError('لم يتم العثور على معلومات الكتاب. يرجى العودة إلى القائمة الرئيسية.');
             return;
         }
 
-        bookInfo = JSON.parse(storedBookInfo);
-        CONFIG = bookInfo.config;
+        // Use stored config or fallback to default config
+        CONFIG = bookInfo.config || {
+            bookUrlPrefix: 'https://islamicbooks-b13c0.web.app/sqlite/',
+            dbName: 'booksCache',
+            version: 3
+        };
+        bookInfo.config = CONFIG;
 
         // Initialize SQL.js
         const SQL = await initSqlJs({
@@ -1065,9 +1253,23 @@ async function loadBookPages() {
     totalPages = stmt.getAsObject().count;
     stmt.free();
 
-    // Restore last read page or start at page 1
-    const savedPage = getReadingProgress();
-    currentPage = Math.min(savedPage, totalPages);
+    // Check URL for page parameter first, then localStorage, then default to 1
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlPage = urlParams.get('page');
+
+    let startPage = 1;
+    if (urlPage) {
+        startPage = Math.min(parseInt(urlPage, 10), totalPages);
+    } else {
+        const savedPage = getReadingProgress();
+        startPage = Math.min(savedPage, totalPages);
+    }
+    currentPage = startPage;
+
+    // Initialize translation settings from URL before first updatePageDisplay
+    // This ensures URL language is loaded into localStorage before any URL updates
+    getTranslationSettings();
+
     document.getElementById('book-title-header').textContent = bookInfo.book_name;
     document.getElementById('book-author-header').textContent = bookInfo.author_name || '';
     document.getElementById('goto-input').max = totalPages;
@@ -1232,6 +1434,9 @@ function updatePageDisplay() {
 
     // Save reading progress
     saveReadingProgress();
+
+    // Update URL with current page
+    updateUrlParams();
 }
 
 function updateProgressBar() {

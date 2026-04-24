@@ -884,7 +884,7 @@
                 </button>
             </div>
             <h1>📚 مكتبة الكتب الإسلامية</h1>
-            <p>Islamic Books Library</p>
+            <p>Islamic Books Library • 8,203 Books • 7,158,882 Pages • AI Translation</p>
         </div>
 
         <!-- Loading Screen -->
@@ -900,7 +900,7 @@
             <div class="search-container">
                 <div class="search-row">
                     <div class="search-input-wrapper">
-                        <input type="text" id="search-input" class="search-input" placeholder="ابحث في الكتب..."
+                        <input type="text" id="search-input" class="search-input" placeholder="ابحث في الكتب... | Search books..."
                             autocomplete="off">
                         <button class="ai-search-btn" onclick="aiSearch()" title="AI Search | بحث ذكي"><img src="ai.png"
                                 alt="AI" style="width: 20px; height: 20px;"></button>
@@ -2039,8 +2039,8 @@
                 config: CONFIG
             }));
 
-            // Redirect to reader page
-            window.location.href = 'read.html';
+            // Redirect to reader page with simplified URL (only bookid needed)
+            window.location.href = `read.html?bookid=${book.book_id}`;
         }
 
         // Add book to recently opened list
@@ -2107,6 +2107,105 @@
                 .trim();
         }
 
+        // English to Arabic transliteration mapping
+        const arabicConsonants = {
+            'b': 'ب', 't': 'ت', 'j': 'ج', 'h': 'ح',
+            'd': 'د', 'r': 'ر', 'z': 'ز', 's': 'س', 'c': 'س',
+            'f': 'ف', 'q': 'ق', 'k': 'ك', 'l': 'ل', 'm': 'م',
+            'n': 'ن', 'w': 'و', 'y': 'ي', 'v': 'ف', 'g': 'غ', 'p': 'ب',
+            'x': 'كس'
+        };
+
+        const arabicDigraphs = {
+            'th': 'ث', 'kh': 'خ', 'dh': 'ذ', 'sh': 'ش', 'gh': 'غ'
+        };
+
+        const arabicLongVowels = {
+            'aa': 'ا', 'ee': 'ي', 'ii': 'ي', 'oo': 'و', 'uu': 'و',
+            'ay': 'اي', 'ai': 'اي', 'ey': 'اي', 'aw': 'او', 'ou': 'او'
+        };
+
+        // Check if text is primarily English/Latin characters
+        function isEnglishText(text) {
+            if (!text) return false;
+            const latinChars = text.match(/[a-zA-Z]/g) || [];
+            const arabicChars = text.match(/[\u0600-\u06FF]/g) || [];
+            return latinChars.length > arabicChars.length && latinChars.length > 0;
+        }
+
+        // Check if character is a vowel
+        function isVowel(char) {
+            return 'aeiou'.includes(char);
+        }
+
+        // Check if character is a consonant
+        function isConsonant(char) {
+            return /[bcdfghjklmnpqrstvwxyz]/.test(char);
+        }
+
+        // Transliterate English text to Arabic
+        function transliterateToArabic(text) {
+            if (!text) return '';
+
+            let input = text.toLowerCase().trim();
+
+            // Handle common Islamic prefixes
+            input = input.replace(/^al[- ]?/g, 'ال');
+            input = input.replace(/^el[- ]?/g, 'ال');
+            input = input.replace(/ al[- ]?/g, ' ال');
+            input = input.replace(/ el[- ]?/g, ' ال');
+
+            // Replace digraphs first (longer patterns)
+            for (const [digraph, arabic] of Object.entries(arabicDigraphs)) {
+                input = input.split(digraph).join(arabic);
+            }
+
+            // Replace long vowels and diphthongs
+            for (const [vowel, arabic] of Object.entries(arabicLongVowels)) {
+                input = input.split(vowel).join(arabic);
+            }
+
+            // Process remaining characters - skip short vowels between consonants
+            let arabicResult = '';
+            let i = 0;
+            while (i < input.length) {
+                const char = input[i];
+                const prevChar = i > 0 ? input[i - 1] : '';
+                const nextChar = i < input.length - 1 ? input[i + 1] : '';
+
+                if (/[\u0600-\u06FF]/.test(char)) {
+                    // Already Arabic, keep it
+                    arabicResult += char;
+                } else if (char === ' ') {
+                    arabicResult += ' ';
+                } else if (isVowel(char)) {
+                    // Check if short vowel (between consonants) - skip it
+                    const prevIsConsonant = isConsonant(prevChar) || /[\u0600-\u06FF]/.test(prevChar);
+                    const nextIsConsonant = isConsonant(nextChar) || /[\u0600-\u06FF]/.test(nextChar);
+
+                    if (prevIsConsonant && nextIsConsonant) {
+                        // Short vowel between consonants - skip (Arabic doesn't write these)
+                        i++;
+                        continue;
+                    }
+                    // Word-final 'a' is usually taa marbuta (ة) - skip it
+                    if (char === 'a' && (nextChar === '' || nextChar === ' ')) {
+                        i++;
+                        continue;
+                    }
+                    // Other vowel positions - convert to letter
+                    if (char === 'a') arabicResult += 'ا';
+                    else if (char === 'i' || char === 'e') arabicResult += 'ي';
+                    else if (char === 'o' || char === 'u') arabicResult += 'و';
+                } else if (arabicConsonants[char]) {
+                    arabicResult += arabicConsonants[char];
+                }
+                i++;
+            }
+
+            return arabicResult.trim();
+        }
+
         // Perform search with improved filtering
         function performSearch(query) {
             updateSearchFilterDisplay(query);
@@ -2126,6 +2225,25 @@
                 // Check if query matches book name or author name
                 return bookName.includes(normalizedQuery) || authorName.includes(normalizedQuery);
             });
+
+            // If no results and query is English, try transliteration
+            if (filteredBooks.length === 0 && isEnglishText(query)) {
+                const arabicQuery = transliterateToArabic(query);
+                if (arabicQuery && arabicQuery !== normalizedQuery) {
+                    const normalizedArabicQuery = normalizeArabicText(arabicQuery);
+
+                    filteredBooks = allBooks.filter(book => {
+                        const bookName = normalizeArabicText(book.book_name || '');
+                        const authorName = normalizeArabicText(getAuthorName(book.main_author));
+                        return bookName.includes(normalizedArabicQuery) || authorName.includes(normalizedArabicQuery);
+                    });
+
+                    // Update search display to show transliteration was used
+                    if (filteredBooks.length > 0) {
+                        updateSearchFilterDisplay(`${query} → ${arabicQuery}`);
+                    }
+                }
+            }
 
             renderBooksList();
         }
