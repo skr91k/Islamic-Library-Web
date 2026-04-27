@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /home.html
+Allow: /googleaaa179d108789c87.html
+Disallow: /read.html
+
+Sitemap: https://islamicbooks2.web.app/sitemap.xml
