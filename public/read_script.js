@@ -90,6 +90,30 @@ let currentTranslationController = null;
 let prefetchTimeout = null;
 let prefetchController = null;
 let lastTranslatedPage = null;
+let fetchRetryTimer = null;
+let fetchRetryCountdown = null;
+
+function isFetchMode() {
+    return new URLSearchParams(window.location.search).get('action') === 'fetch';
+}
+
+function playBeep() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.6);
+    } catch (e) {
+        console.warn('Beep failed:', e);
+    }
+}
 
 // Translation Settings
 const defaultSettings = {
@@ -484,7 +508,7 @@ function showTranslationLoading() {
 
     translationDiv.innerHTML = '<div class="translation-loading"><img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> Translating... <span class="translation-spinner"></span></div>';
     document.getElementById('translation-container').classList.remove('hidden');
-    document.getElementById('translation-refresh-btn')?.classList.add('hidden');
+    document.getElementById('translation-refresh-group')?.classList.add('hidden');
 }
 
 function showTranslation(text) {
@@ -505,7 +529,18 @@ function showTranslation(text) {
     translationDiv.innerHTML = text.replace(/\n/g, '<br>');
     document.getElementById('translation-container').classList.remove('hidden');
     document.getElementById('original-header')?.classList.remove('hidden');
-    document.getElementById('translation-refresh-btn')?.classList.remove('hidden');
+    document.getElementById('translation-refresh-group')?.classList.remove('hidden');
+
+    // Auto-advance in fetch mode
+    if (isFetchMode()) {
+        clearFetchRetryTimers();
+        setTimeout(() => nextPage(), 1500);
+    }
+}
+
+function clearFetchRetryTimers() {
+    if (fetchRetryTimer) { clearTimeout(fetchRetryTimer); fetchRetryTimer = null; }
+    if (fetchRetryCountdown) { clearInterval(fetchRetryCountdown); fetchRetryCountdown = null; }
 }
 
 function hideTranslation() {
@@ -517,7 +552,7 @@ function hideTranslation() {
     if (originalHeader) {
         originalHeader.classList.add('hidden');
     }
-    document.getElementById('translation-refresh-btn')?.classList.add('hidden');
+    document.getElementById('translation-refresh-group')?.classList.add('hidden');
     if (translationTimeout) {
         clearTimeout(translationTimeout);
     }
@@ -573,6 +608,31 @@ function showTranslationError(errorType, details = '') {
     `;
     document.getElementById('translation-container').classList.remove('hidden');
     document.getElementById('original-header')?.classList.remove('hidden');
+
+    // Fetch mode: beep + 60s countdown then retry
+    if (isFetchMode()) {
+        clearFetchRetryTimers();
+        playBeep();
+
+        let secondsLeft = 60;
+        const countdownEl = document.createElement('div');
+        countdownEl.className = 'fetch-retry-countdown';
+        countdownEl.textContent = `⏱ Retrying in ${secondsLeft}s...`;
+        translationDiv.querySelector('.translation-error')?.appendChild(countdownEl);
+
+        fetchRetryCountdown = setInterval(() => {
+            secondsLeft--;
+            if (countdownEl.isConnected) {
+                countdownEl.textContent = `⏱ Retrying in ${secondsLeft}s...`;
+            }
+            if (secondsLeft <= 0) clearInterval(fetchRetryCountdown);
+        }, 1000);
+
+        fetchRetryTimer = setTimeout(() => {
+            clearFetchRetryTimers();
+            retryTranslation();
+        }, 60000);
+    }
 }
 
 function retryTranslation() {
@@ -738,7 +798,10 @@ function createTranslationContainer() {
             <div class="translation-header clickable" onclick="openTranslationSettings()" id="translation-header-text">
                 <img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> ${langName} Translation <span class="settings-icon">⚙️</span>
             </div>
-            <button class="translation-refresh-btn hidden" id="translation-refresh-btn" onclick="refreshTranslation()" title="Refresh from AI">↻</button>
+            <div class="translation-refresh-group hidden" id="translation-refresh-group">
+                <span class="translation-header-divider"></span>
+                <button class="translation-refresh-btn" id="translation-refresh-btn" onclick="refreshTranslation()" title="Refresh from AI">↻</button>
+            </div>
         </div>
         <div id="translation-content" class="translation-content"></div>
     `;
@@ -888,6 +951,11 @@ function updateUrlWithBookInfo(info, page = null, language = null, aiEnabled = n
     // Add AI translation state if enabled
     if (aiEnabled === true) {
         params.set('ai', '1');
+    }
+
+    // Preserve action=fetch if active
+    if (new URLSearchParams(window.location.search).get('action') === 'fetch') {
+        params.set('action', 'fetch');
     }
 
     const newUrl = `${window.location.pathname}?${params.toString()}`;

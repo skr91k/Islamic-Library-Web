@@ -333,6 +333,13 @@ body {
     line-height: 1.6;
 }
 
+.fetch-retry-countdown {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
 .translation-error .error-details {
     background: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
@@ -632,16 +639,11 @@ body {
     opacity: 0.8;
 }
 
-.translation-header .settings-icon {
-    margin-left: 10px;
-    font-size: 0.8rem;
-}
-
 .translation-header-row {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 6px;
     margin-bottom: 15px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border-color);
@@ -654,14 +656,38 @@ body {
     border-bottom: none;
 }
 
+.translation-header .settings-icon {
+    font-size: 16px;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+.translation-refresh-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.translation-refresh-group.hidden {
+    display: none;
+}
+
+.translation-header-divider {
+    display: inline-block;
+    width: 1px;
+    height: 16px;
+    background: var(--border-color);
+    flex-shrink: 0;
+}
+
 .translation-refresh-btn {
     background: none;
     border: 1px solid #4CAF50;
     color: #4CAF50;
     border-radius: 50%;
-    width: 26px;
-    height: 26px;
-    font-size: 1rem;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -669,10 +695,7 @@ body {
     justify-content: center;
     flex-shrink: 0;
     transition: all 0.2s;
-}
-
-.translation-refresh-btn.hidden {
-    display: none;
+    padding: 0;
 }
 
 .translation-refresh-btn:hover {
