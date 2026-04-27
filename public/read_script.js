@@ -387,8 +387,8 @@ function scheduleTranslation() {
     // Show loading indicator
     showTranslationLoading();
 
-    // Debounce: wait 1 second before translating
-    translationTimeout = setTimeout(async () => {
+    // Check Firestore immediately — no debounce needed for reads
+    (async () => {
         const pageContent = document.getElementById('page-content');
         const originalText = pageContent?.innerText || '';
 
@@ -402,42 +402,70 @@ function scheduleTranslation() {
         const pageNum = currentPage;
         const language = settings.language;
 
-        // Check cache first
         const cachedTranslation = await getCachedTranslation(bookId, pageNum, language);
         if (cachedTranslation) {
             if (aiTranslateEnabled) {
-                showTranslation(cachedTranslation, true); // true = from cache
-                // Also schedule prefetch for next page
+                showTranslation(cachedTranslation, true);
                 lastTranslatedPage = pageNum;
                 schedulePrefetch(pageNum);
             }
             return;
         }
 
-        const result = await translateWithGemini(originalText);
+        // Debounce only the Gemini API call to avoid rapid repeated requests
+        translationTimeout = setTimeout(async () => {
+            const result = await translateWithGemini(originalText);
 
-        if (!result) {
-            // Cancelled
-            return;
-        }
+            if (!result) return; // Cancelled
 
-        if (!aiTranslateEnabled) {
-            hideTranslation();
-            return;
-        }
+            if (!aiTranslateEnabled) {
+                hideTranslation();
+                return;
+            }
 
-        if (result.error) {
-            showTranslationError(result.error, result.details);
-        } else if (result.success) {
-            // Save to cache
-            await setCachedTranslation(bookId, pageNum, language, result.text);
-            showTranslation(result.text, false);
+            if (result.error) {
+                showTranslationError(result.error, result.details);
+            } else if (result.success) {
+                await setCachedTranslation(bookId, pageNum, language, result.text);
+                showTranslation(result.text, false);
+                lastTranslatedPage = pageNum;
+                schedulePrefetch(pageNum);
+            }
+        }, 1000);
+    })();
+}
 
-            // Schedule prefetch for next page after 10 seconds
-            lastTranslatedPage = pageNum;
-            schedulePrefetch(pageNum);
-        }
-    }, 1000);
+async function refreshTranslation() {
+    if (!aiTranslateEnabled) return;
+
+    // Cancel any pending translation or prefetch
+    if (translationTimeout) clearTimeout(translationTimeout);
+    if (prefetchTimeout) { clearTimeout(prefetchTimeout); prefetchTimeout = null; }
+    if (prefetchController) { prefetchController.abort(); prefetchController = null; }
+    if (currentTranslationController) { currentTranslationController.abort(); currentTranslationController = null; }
+
+    const pageContent = document.getElementById('page-content');
+    const originalText = pageContent?.innerText || '';
+    if (!originalText.trim()) return;
+
+    showTranslationLoading();
+
+    const settings = getTranslationSettings();
+    const bookId = bookInfo?.book_id || 0;
+    const pageNum = currentPage;
+    const language = settings.language;
+
+    const result = await translateWithGemini(originalText);
+    if (!result) return;
+
+    if (result.error) {
+        showTranslationError(result.error, result.details);
+    } else if (result.success) {
+        await setCachedTranslation(bookId, pageNum, language, result.text);
+        showTranslation(result.text, false);
+        lastTranslatedPage = pageNum;
+        schedulePrefetch(pageNum);
+    }
 }
 
 function showTranslationLoading() {
@@ -704,8 +732,11 @@ function createTranslationContainer() {
     container.id = 'translation-container';
     container.className = 'translation-container hidden';
     container.innerHTML = `
-        <div class="translation-header clickable" onclick="openTranslationSettings()" id="translation-header-text">
-            <img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> ${langName} Translation <span class="settings-icon">⚙️</span>
+        <div class="translation-header-row">
+            <div class="translation-header clickable" onclick="openTranslationSettings()" id="translation-header-text">
+                <img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> ${langName} Translation <span class="settings-icon">⚙️</span>
+            </div>
+            <button class="translation-refresh-btn" onclick="refreshTranslation()" title="Refresh from AI">↻</button>
         </div>
         <div id="translation-content" class="translation-content"></div>
     `;
