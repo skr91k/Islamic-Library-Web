@@ -158,6 +158,13 @@
             margin: 50px 0;
         }
 
+        .spinner-wrapper {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            margin: 20px auto;
+        }
+
         .spinner {
             border: 4px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
@@ -165,18 +172,20 @@
             width: 50px;
             height: 50px;
             animation: spin 1s linear infinite;
-            margin: 20px auto;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         .progress-text {
             position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             font-size: 0.7rem;
             font-weight: bold;
             color: var(--text-light);
+            white-space: nowrap;
         }
 
         @keyframes spin {
@@ -871,7 +880,7 @@
         <div class="header">
             <div class="header-buttons">
                 <button class="contact-button" onclick="window.open('https://utilitykit.web.app/contactus?id=islamicbooks', '_self')" title="Contact Us">
-                    ✉️
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                 </button>
                 <button class="sort-button" onclick="toggleSort()" id="sort-button" title="Toggle Sort">
                     🔤
@@ -889,7 +898,8 @@
 
         <!-- Loading Screen -->
         <div id="loading" class="loading">
-            <div class="spinner">
+            <div class="spinner-wrapper">
+                <div class="spinner"></div>
                 <span class="progress-text" id="progress-text"></span>
             </div>
             <p>جاري تحميل فهرس الكتب...</p>
@@ -1105,7 +1115,7 @@
         }
 
         function initSort() {
-            sortMode = localStorage.getItem('sortMode') || 'name';
+            sortMode = localStorage.getItem('sortMode') || 'pages';
             updateSortIcon();
         }
 

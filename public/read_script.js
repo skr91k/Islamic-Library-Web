@@ -585,6 +585,9 @@ function showTranslationError(errorType, details = '') {
                 <button class="error-settings-btn" onclick="openTranslationSettings()">
                     ⚙️ Settings | الإعدادات
                 </button>
+                <a class="error-support-btn" href="https://utilitykit.web.app/contactus?id=islamicbooks" target="_blank" rel="noopener noreferrer">
+                    🛟 Support | الدعم
+                </a>
             </div>
         </div>
     `;
