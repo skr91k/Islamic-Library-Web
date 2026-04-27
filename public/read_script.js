@@ -405,7 +405,7 @@ function scheduleTranslation() {
         const cachedTranslation = await getCachedTranslation(bookId, pageNum, language);
         if (cachedTranslation) {
             if (aiTranslateEnabled) {
-                showTranslation(cachedTranslation, true);
+                showTranslation(cachedTranslation);
                 lastTranslatedPage = pageNum;
                 schedulePrefetch(pageNum);
             }
@@ -427,7 +427,7 @@ function scheduleTranslation() {
                 showTranslationError(result.error, result.details);
             } else if (result.success) {
                 await setCachedTranslation(bookId, pageNum, language, result.text);
-                showTranslation(result.text, false);
+                showTranslation(result.text);
                 lastTranslatedPage = pageNum;
                 schedulePrefetch(pageNum);
             }
@@ -462,7 +462,7 @@ async function refreshTranslation() {
         showTranslationError(result.error, result.details);
     } else if (result.success) {
         await setCachedTranslation(bookId, pageNum, language, result.text);
-        showTranslation(result.text, false);
+        showTranslation(result.text);
         lastTranslatedPage = pageNum;
         schedulePrefetch(pageNum);
     }
@@ -484,9 +484,10 @@ function showTranslationLoading() {
 
     translationDiv.innerHTML = '<div class="translation-loading"><img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> Translating... <span class="translation-spinner"></span></div>';
     document.getElementById('translation-container').classList.remove('hidden');
+    document.getElementById('translation-refresh-btn')?.classList.add('hidden');
 }
 
-function showTranslation(text, fromCache = false) {
+function showTranslation(text) {
     let translationDiv = document.getElementById('translation-content');
     if (!translationDiv) {
         createTranslationContainer();
@@ -496,15 +497,15 @@ function showTranslation(text, fromCache = false) {
     // Update header with language and cache status
     const settings = getTranslationSettings();
     const langName = languageNames[settings.language] || 'English';
-    const cacheIndicator = fromCache ? ' 💾' : '';
     const headerEl = document.getElementById('translation-header-text');
     if (headerEl) {
-        headerEl.innerHTML = `<img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> ${langName} Translation${cacheIndicator} <span class="settings-icon">⚙️</span>`;
+        headerEl.innerHTML = `<img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> ${langName} Translation <span class="settings-icon">⚙️</span>`;
     }
 
     translationDiv.innerHTML = text.replace(/\n/g, '<br>');
     document.getElementById('translation-container').classList.remove('hidden');
     document.getElementById('original-header')?.classList.remove('hidden');
+    document.getElementById('translation-refresh-btn')?.classList.remove('hidden');
 }
 
 function hideTranslation() {
@@ -516,6 +517,7 @@ function hideTranslation() {
     if (originalHeader) {
         originalHeader.classList.add('hidden');
     }
+    document.getElementById('translation-refresh-btn')?.classList.add('hidden');
     if (translationTimeout) {
         clearTimeout(translationTimeout);
     }
@@ -736,7 +738,7 @@ function createTranslationContainer() {
             <div class="translation-header clickable" onclick="openTranslationSettings()" id="translation-header-text">
                 <img src="ai.png" alt="AI" style="width: 16px; height: 16px; vertical-align: middle;"> ${langName} Translation <span class="settings-icon">⚙️</span>
             </div>
-            <button class="translation-refresh-btn" onclick="refreshTranslation()" title="Refresh from AI">↻</button>
+            <button class="translation-refresh-btn hidden" id="translation-refresh-btn" onclick="refreshTranslation()" title="Refresh from AI">↻</button>
         </div>
         <div id="translation-content" class="translation-content"></div>
     `;
