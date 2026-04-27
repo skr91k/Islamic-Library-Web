@@ -307,11 +307,13 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
         import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js';
+        import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, getCountFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
         // Initialize Firebase
         if (typeof FIREBASE_CONFIG !== 'undefined') {
             const app = initializeApp(FIREBASE_CONFIG);
             const analytics = getAnalytics(app);
+            const db = getFirestore(app);
 
             // Get book info from localStorage
             const bookInfo = JSON.parse(localStorage.getItem('currentBook') || '{}');
@@ -339,7 +341,32 @@
                 logEvent(analytics, eventName, params);
             };
 
-            console.log('Firebase Analytics initialized');
+            // Firestore translation helpers (key: {language}_{bookId}_{pageNum})
+            window.firestoreGetTranslation = async (bookId, pageNum, language) => {
+                const docRef = doc(db, 'translations', `${language}_${bookId}_${pageNum}`);
+                const snap = await getDoc(docRef);
+                return snap.exists() ? snap.data().text : null;
+            };
+
+            window.firestoreSetTranslation = async (bookId, pageNum, language, text) => {
+                const docRef = doc(db, 'translations', `${language}_${bookId}_${pageNum}`);
+                await setDoc(docRef, { bookId: String(bookId), pageNum, language, text, timestamp: Date.now() });
+            };
+
+            window.firestoreClearBookTranslations = async (bookId) => {
+                const q = query(collection(db, 'translations'), where('bookId', '==', String(bookId)));
+                const snap = await getDocs(q);
+                await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+                return snap.size;
+            };
+
+            window.firestoreCountBookTranslations = async (bookId) => {
+                const q = query(collection(db, 'translations'), where('bookId', '==', String(bookId)));
+                const snap = await getCountFromServer(q);
+                return snap.data().count;
+            };
+
+            console.log('Firebase initialized');
         }
     </script>
 </body>

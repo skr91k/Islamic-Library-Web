@@ -86,7 +86,7 @@ const DEFAULT_API_KEY = (typeof CONFIG_API !== 'undefined' && CONFIG_API.GEMINI_
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
 let translationTimeout = null;
 let currentTranslationController = null;
-let translationCache = null;
+// translationCache removed — translations stored in Firestore
 let prefetchTimeout = null;
 let prefetchController = null;
 let lastTranslatedPage = null;
@@ -179,105 +179,55 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Translation Cache using IndexedDB
-async function initTranslationCache() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open('TranslationCache', 1);
-
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-            translationCache = request.result;
-            resolve(translationCache);
-        };
-
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains('translations')) {
-                db.createObjectStore('translations', { keyPath: 'id' });
-            }
-        };
-    });
-}
-
-function getCacheKey(bookId, pageNum, language) {
-    return `${bookId}_${pageNum}_${language}`;
-}
+// Translation Cache — stored in Firestore (functions exposed via read.html module script)
 
 async function getCachedTranslation(bookId, pageNum, language) {
-    if (!translationCache) await initTranslationCache();
-
-    return new Promise((resolve) => {
-        try {
-            const tx = translationCache.transaction('translations', 'readonly');
-            const store = tx.objectStore('translations');
-            const key = getCacheKey(bookId, pageNum, language);
-            const request = store.get(key);
-
-            request.onsuccess = () => resolve(request.result?.text || null);
-            request.onerror = () => resolve(null);
-        } catch (e) {
-            resolve(null);
+    try {
+        if (window.firestoreGetTranslation) {
+            return await window.firestoreGetTranslation(bookId, pageNum, language);
         }
-    });
+    } catch (e) {
+        console.error('Firestore get translation error:', e);
+    }
+    return null;
 }
 
 async function setCachedTranslation(bookId, pageNum, language, text) {
-    if (!translationCache) await initTranslationCache();
-
-    return new Promise((resolve) => {
-        try {
-            const tx = translationCache.transaction('translations', 'readwrite');
-            const store = tx.objectStore('translations');
-            const key = getCacheKey(bookId, pageNum, language);
-            store.put({ id: key, bookId, pageNum, language, text, timestamp: Date.now() });
-            tx.oncomplete = () => resolve(true);
-            tx.onerror = () => resolve(false);
-        } catch (e) {
-            resolve(false);
+    try {
+        if (window.firestoreSetTranslation) {
+            await window.firestoreSetTranslation(bookId, pageNum, language, text);
+            return true;
         }
-    });
+    } catch (e) {
+        console.error('Firestore set translation error:', e);
+    }
+    return false;
 }
 
 async function clearTranslationCache() {
-    if (!translationCache) await initTranslationCache();
-
-    return new Promise((resolve) => {
-        try {
-            const tx = translationCache.transaction('translations', 'readwrite');
-            const store = tx.objectStore('translations');
-            store.clear();
-            tx.oncomplete = () => {
-                updateCacheCount();
-                alert('Translation cache cleared successfully!');
-                resolve(true);
-            };
-            tx.onerror = () => resolve(false);
-        } catch (e) {
-            resolve(false);
+    try {
+        if (window.firestoreClearBookTranslations) {
+            const bookId = bookInfo?.book_id || 0;
+            await window.firestoreClearBookTranslations(bookId);
+            await updateCacheCount();
+            alert('Translation cache cleared successfully!');
         }
-    });
+    } catch (e) {
+        console.error('Firestore clear error:', e);
+        alert('Failed to clear translation cache.');
+    }
 }
 
 async function updateCacheCount() {
-    if (!translationCache) {
-        try {
-            await initTranslationCache();
-        } catch (e) {
-            return;
-        }
-    }
-
     try {
-        const tx = translationCache.transaction('translations', 'readonly');
-        const store = tx.objectStore('translations');
-        const request = store.count();
-
-        request.onsuccess = () => {
+        if (window.firestoreCountBookTranslations) {
+            const bookId = bookInfo?.book_id || 0;
+            const count = await window.firestoreCountBookTranslations(bookId);
             const countEl = document.getElementById('cache-count');
-            if (countEl) countEl.textContent = request.result;
-        };
+            if (countEl) countEl.textContent = count;
+        }
     } catch (e) {
-        console.error('Error counting cache:', e);
+        console.error('Firestore count error:', e);
     }
 }
 
@@ -811,10 +761,25 @@ function getBookInfoFromUrl() {
 // Fetch book details from master database by book_id
 async function fetchBookDetailsFromMaster(bookId) {
     try {
-        // Load master database if not already loaded
+        // Load master database if not already loaded this session
         if (!window.masterDbCache) {
-            const response = await fetch('./master2.sqlite.zip');
-            const arrayBuffer = await response.arrayBuffer();
+            const MASTER_URL = './master2.sqlite.zip';
+            const CACHE_NAME = 'master-db-v1';
+            let arrayBuffer;
+
+            if ('caches' in window) {
+                const cache = await caches.open(CACHE_NAME);
+                let cached = await cache.match(MASTER_URL);
+                if (cached) {
+                    arrayBuffer = await cached.arrayBuffer();
+                } else {
+                    const response = await fetch(MASTER_URL);
+                    await cache.put(MASTER_URL, response.clone());
+                    arrayBuffer = await response.arrayBuffer();
+                }
+            } else {
+                arrayBuffer = await (await fetch(MASTER_URL)).arrayBuffer();
+            }
 
             const zip = await JSZip.loadAsync(arrayBuffer);
             let sqliteFile = null;
@@ -967,9 +932,6 @@ async function init() {
 
         // Load the book
         await loadBook();
-
-        // Initialize translation cache
-        await initTranslationCache();
 
         hideLoading();
         showReader();
