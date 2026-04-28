@@ -1,4 +1,6 @@
 // Theme management
+const THEMES = ['dark', 'light', 'deep-night', 'soft-noir', 'vintage'];
+
 function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -7,18 +9,17 @@ function initTheme() {
 
 function toggleTheme() {
     const currentTheme = document.documentElement.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
+    const currentIndex = THEMES.indexOf(currentTheme);
+    const nextTheme = THEMES[(currentIndex + 1) % THEMES.length];
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    localStorage.setItem('theme', nextTheme);
     updateThemeIcon();
 }
 
 function updateThemeIcon() {
-    const theme = document.documentElement.getAttribute('data-theme');
     const toggle = document.getElementById('theme-toggle');
     if (toggle) {
-        toggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+        toggle.textContent = '🌙';
     }
 }
 
