@@ -461,6 +461,7 @@ function scheduleTranslation() {
 
 async function refreshTranslation() {
     if (!aiTranslateEnabled) return;
+    if (!confirm('Retranslate this page using AI?\nThis will call the Gemini API and overwrite the saved translation.')) return;
 
     // Cancel any pending translation or prefetch
     if (translationTimeout) clearTimeout(translationTimeout);
@@ -1537,7 +1538,11 @@ function scrollToTop() {
 
 // Navigation functions
 function goBack() {
-    window.history.back();
+    if (document.referrer && new URL(document.referrer).host === window.location.host) {
+        window.history.back();
+    } else {
+        window.location.href = '/';
+    }
 }
 
 function goHome() {
