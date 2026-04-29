@@ -198,6 +198,21 @@
             font-size: 1.2rem;
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .sort-button.sort-search-active::after {
+            content: '✕';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: #ff4444;
+            opacity: 0.85;
+            pointer-events: none;
+            z-index: 1;
         }
 
         .contact-button:hover,
@@ -1151,12 +1166,18 @@
             const currentIndex = modes.indexOf(sortMode);
             sortMode = modes[(currentIndex + 1) % modes.length];
             localStorage.setItem('sortMode', sortMode);
+            lastAction = 'sort';
             updateSortIcon();
             applySortAndRender();
         }
 
-        function updateSortIcon() {
+        function updateSortIcon(searchOverride) {
             const btn = document.getElementById('sort-button');
+            btn.classList.toggle('sort-search-active', !!searchOverride);
+            if (searchOverride) {
+                btn.title = 'مرتب حسب الصلة بالبحث | Sorted by Search Relevance';
+                return;
+            }
             if (sortMode === 'name') {
                 btn.textContent = '🔤';
                 btn.title = 'مرتب حسب الاسم | Sorted by Name (A-Z)';
@@ -1196,6 +1217,7 @@
         let authorFilter = null; // Current author filter from URL
         let categoryFilter = null; // Current category filter
         let sortMode = 'name'; // 'name', 'pages', 'year_asc', 'year_desc'
+        let lastAction = 'sort'; // 'sort' | 'search' — tracks what triggered the last render
 
         // Initialize sort after variable is declared
         initSort();
@@ -1938,9 +1960,22 @@
             try {
                 const grid = document.getElementById('books-grid');
 
-                // Apply current sort mode
+                // Sort logic:
+                // - keyword + last typed  → starts-with first, then contains
+                // - keyword + last sorted → use sortMode
+                // - no keyword            → use sortMode
+                const activeSearch = document.getElementById('search-input')?.value?.trim();
                 const isValidYear = (y) => y >= 1 && y <= 3000;
-                if (sortMode === 'name') {
+                const useSearchSort = activeSearch && lastAction === 'search';
+                updateSortIcon(useSearchSort);
+                if (useSearchSort) {
+                    const normalizedActiveQuery = normalizeArabicText(activeSearch);
+                    filteredBooks.sort((a, b) => {
+                        const aStarts = normalizeArabicText(a.book_name || '').startsWith(normalizedActiveQuery) ? 0 : 1;
+                        const bStarts = normalizeArabicText(b.book_name || '').startsWith(normalizedActiveQuery) ? 0 : 1;
+                        return aStarts - bStarts;
+                    });
+                } else if (sortMode === 'name') {
                     filteredBooks.sort((a, b) => (a.book_name || '').localeCompare(b.book_name || '', 'ar'));
                 } else if (sortMode === 'pages') {
                     filteredBooks.sort((a, b) => (parseInt(b.page_count) || 0) - (parseInt(a.page_count) || 0));
@@ -2281,6 +2316,7 @@
         // Perform search with improved filtering
         function performSearch(query) {
             updateSearchFilterDisplay(query);
+            lastAction = query && query.trim() !== '' ? 'search' : 'sort';
 
             if (!query || query.trim() === '') {
                 filteredBooks = [...allBooks];
@@ -2298,6 +2334,15 @@
                 return bookName.includes(normalizedQuery) || authorName.includes(normalizedQuery);
             });
 
+            // Sort: books whose name starts with query come before those that only contain it
+            filteredBooks.sort((a, b) => {
+                const aName = normalizeArabicText(a.book_name || '');
+                const bName = normalizeArabicText(b.book_name || '');
+                const aStarts = aName.startsWith(normalizedQuery) ? 0 : 1;
+                const bStarts = bName.startsWith(normalizedQuery) ? 0 : 1;
+                return aStarts - bStarts;
+            });
+
             // If no results and query is English, try transliteration
             if (filteredBooks.length === 0 && isEnglishText(query)) {
                 const arabicQuery = transliterateToArabic(query);
@@ -2308,6 +2353,14 @@
                         const bookName = normalizeArabicText(book.book_name || '');
                         const authorName = normalizeArabicText(getAuthorName(book.main_author));
                         return bookName.includes(normalizedArabicQuery) || authorName.includes(normalizedArabicQuery);
+                    });
+
+                    filteredBooks.sort((a, b) => {
+                        const aName = normalizeArabicText(a.book_name || '');
+                        const bName = normalizeArabicText(b.book_name || '');
+                        const aStarts = aName.startsWith(normalizedArabicQuery) ? 0 : 1;
+                        const bStarts = bName.startsWith(normalizedArabicQuery) ? 0 : 1;
+                        return aStarts - bStarts;
                     });
 
                     // Update search display to show transliteration was used
